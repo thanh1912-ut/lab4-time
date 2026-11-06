@@ -14,18 +14,27 @@ Mục tiêu:
 
 ## 2. Data Introduction
 
-Bộ dữ liệu điện của UCI **không có biến thời tiết**, nên nhóm ghép thêm dữ liệu thời tiết cùng khu vực (Bồ Đào Nha) và cùng thời gian.
+Bộ dữ liệu điện của UCI **không có biến thời tiết**, nên nhóm ghép thêm số đo thời tiết thật của trạm sân bay Lisbon, cùng khu vực (Bồ Đào Nha) và cùng thời gian.
 
 | Nguồn | Nội dung | Link |
 |---|---|---|
 | UCI ElectricityLoadDiagrams20112014 | Điện tiêu thụ 15 phút/lần của 370 khách hàng ở Bồ Đào Nha, 2011 đến 2014 | https://archive.ics.uci.edu/dataset/321/electricityloaddiagrams20112014 |
-| Open-Meteo Historical Weather | Nhiệt độ, độ ẩm, tốc độ gió theo giờ tại Lisbon | https://open-meteo.com/en/docs/historical-weather-api |
+| NOAA Integrated Surface Database (ISD) | Bản tin quan trắc 30 phút/lần của trạm Lisboa/Portela (LPPT, mã 085360-99999): nhiệt độ, điểm sương, tốc độ gió | https://registry.opendata.aws/noaa-isd/ |
 
-File dùng chung sau khi ghép: `data/processed/load_weather_hourly.csv` (cột `Datetime, load, temperature, humidity, wind_speed`, theo giờ, 2012 đến 2014). _(Thành điền số dòng, thống kê sau khi chạy `s2_data.py`.)_
+File dùng chung sau khi ghép: `data/processed/load_weather_hourly.csv`, **26.304 giờ** từ 01/01/2012 00:00 đến 31/12/2014 23:00, không thiếu.
+
+| Biến | Đơn vị | Ý nghĩa | Trung bình | Nhỏ nhất | Lớn nhất |
+|---|---|---|---|---|---|
+| `load` | MW | Công suất tiêu thụ trung bình trong giờ của 318 khách hàng có dữ liệu suốt 3 năm | 203,3 | 75,7 | 445,8 |
+| `temperature` | °C | Nhiệt độ không khí | 16,4 | 0,0 | 40,0 |
+| `humidity` | % | Độ ẩm tương đối (tính từ nhiệt độ và điểm sương) | 72,8 | 10,1 | 100,0 |
+| `wind_speed` | m/s | Tốc độ gió | 4,1 | 0,0 | 15,2 |
+
+Đã xử lý: 52 khách hàng đăng ký muộn hoặc ngừng sớm (bỏ), 6 giờ đổi giờ bị sai trong dữ liệu điện (nội suy), 104 giờ thiếu bản tin thời tiết (điền). Chi tiết: `docs/lab4/parts/s2_report.md`.
 
 ## 3. Môi trường
 
-- Python 3.11 hoặc 3.12 (TensorFlow chưa chắc hỗ trợ bản mới hơn)
+- Python 3.11 hoặc 3.12 (TensorFlow chưa chắc hỗ trợ bản mới hơn). Mục 2 đã chạy thử với Python 3.13, pandas 3.0.5, numpy 2.5.3, matplotlib 3.11.2.
 - Thư viện: xem `requirements.txt`
 
 ## 4. Cài đặt và chạy
@@ -34,8 +43,8 @@ File dùng chung sau khi ghép: `data/processed/load_weather_hourly.csv` (cột 
 git clone https://github.com/thanh1912-ut/lab4-time.git
 cd lab4-time
 pip install -r requirements.txt
-python src/s2_data.py       # tải dữ liệu gốc vào data/raw/ (không có trên Git vì quá lớn) và tạo file đã ghép
-python src/main.py          # chạy toàn bộ
+python src/main.py          # chạy toàn bộ (dùng data/processed/load_weather_hourly.csv đã có sẵn)
+python src/main.py --rebuild-data   # tải lại dữ liệu gốc (khoảng 710 MB, không có trên Git) và tạo lại file đã ghép
 python src/nc_traffic.py    # bài nâng cao, chạy riêng
 ```
 

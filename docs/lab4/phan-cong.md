@@ -84,7 +84,7 @@ lab4-time/
 ├── data/
 │   ├── raw/                        ← dữ liệu gốc, KHÔNG sửa, KHÔNG đưa lên Git (quá 100 MB)
 │   │   ├── LD2011_2014.txt                 (UCI, Thành tải bằng s2_data.py)
-│   │   ├── weather_lisbon_hourly.csv       (Open-Meteo, Thành tải bằng s2_data.py)
+│   │   ├── isd/085360-99999-201x.gz        (NOAA ISD, trạm sân bay Lisbon, Thành tải bằng s2_data.py)
 │   │   └── metr-la.h5                      (Phạm Lê Văn Bảo tải, bài nâng cao)
 │   └── processed/                  ← được đưa lên Git
 │       ├── load_weather_hourly.csv         (Thành) file chính cả nhóm dùng
@@ -153,23 +153,25 @@ lab4-time/
 | Thời gian | 2011 đến 2014, mỗi 15 phút |
 | Điểm đặc biệt (theo mô tả UCI) | Khách hàng đăng ký sau 2011 có giá trị 0 ở giai đoạn trước; ngày đổi giờ tháng 3 có giá trị 0 lúc 1:00 đến 2:00; ngày đổi giờ tháng 10 thì 1:00 đến 2:00 cộng dồn 2 giờ |
 
-**Cách tạo biến `load`:** cộng tất cả khách hàng tại mỗi mốc 15 phút, rồi lấy trung bình 4 mốc trong 1 giờ (đơn vị kW trung bình trong giờ). Chỉ dùng **2012-01-01 đến 2014-12-31** để tránh năm 2011 có nhiều khách hàng chưa đăng ký (khoảng 26.300 giờ). Thành kiểm tra và ghi số cụ thể.
+**Cách tạo biến `load` (đã làm):** chỉ dùng **2012-01-01 đến 2014-12-31**; giữ **318 khách hàng** có dữ liệu suốt 3 năm (bỏ 52 khách hàng đăng ký muộn hoặc ngừng sớm, để tổng không bị nhảy bậc); cộng các khách hàng tại mỗi mốc 15 phút, lấy trung bình 4 mốc trong giờ, đổi sang **MW**. 6 giờ đổi giờ bị sai được đặt NaN rồi nội suy.
 
-### Thời tiết (Open-Meteo, miễn phí, không cần tài khoản)
+### Thời tiết (NOAA ISD: số đo thật của trạm sân bay Lisbon)
+
+Kế hoạch ban đầu dùng Open-Meteo, nhưng khi làm thì nhóm chuyển sang **số đo thật** của trạm khí tượng sân bay Lisbon trong kho NOAA Integrated Surface Database (ISD): đây là dữ liệu quan trắc, không phải mô phỏng, và tải trực tiếp được.
 
 | Thuộc tính | Giá trị |
 |---|---|
-| API | Open-Meteo Historical Weather: https://open-meteo.com/en/docs/historical-weather-api |
-| Vị trí | Lisbon (vĩ độ 38,72; kinh độ −9,14) |
-| Biến | `temperature_2m` (°C) → `temperature`, `relative_humidity_2m` (%) → `humidity`, `wind_speed_10m` (km/h) → `wind_speed` |
-| Múi giờ | `timezone=Europe/Lisbon` để khớp giờ địa phương của dữ liệu điện |
-| Ví dụ URL | `https://archive-api.open-meteo.com/v1/archive?latitude=38.72&longitude=-9.14&start_date=2012-01-01&end_date=2014-12-31&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=Europe%2FLisbon` |
+| Nguồn | NOAA ISD trên AWS Open Data: `https://noaa-isd-pds.s3.amazonaws.com/data/{năm}/085360-99999-{năm}.gz` |
+| Trạm | 085360-99999, Lisboa/Portela (mã ICAO LPPT), vĩ độ 38,767, kinh độ −9,133 |
+| Tần suất gốc | Bản tin METAR mỗi 30 phút (giờ UTC) |
+| Biến | `temperature` (°C), `humidity` (%, tính từ nhiệt độ và điểm sương bằng công thức Magnus), `wind_speed` (**m/s**) |
+| Múi giờ | Đổi UTC sang giờ Lisbon (`Europe/Lisbon`) để khớp giờ địa phương của dữ liệu điện, rồi lấy trung bình theo giờ |
 
 ### File chính cả nhóm dùng
 
 `data/processed/load_weather_hourly.csv` với 5 cột: `Datetime, load, temperature, humidity, wind_speed`, theo giờ, đã sắp xếp, không trùng, không thiếu.
 
-Với khoảng 26.300 giờ, chia 70/15/15 được khoảng 18.400 giờ train, 3.950 giờ validation, 3.950 giờ test (khoảng 5,5 tháng cuối năm 2014).
+File có **26.304 giờ** (01/01/2012 00:00 đến 31/12/2014 23:00). Chia 70/15/15: **train 18.412 giờ** (01/01/2012 đến 06/02/2014 03:00), **validation 3.946 giờ** (06/02/2014 04:00 đến 20/07/2014 13:00), **test 3.946 giờ** (20/07/2014 14:00 đến 31/12/2014 23:00).
 
 ### Nội dung `src/utils.py` (đã có trong repo)
 
@@ -211,19 +213,14 @@ def metrics(y_true, y_pred):
 
 ### 5.1. Thành: Dựng dự án, mục 2 (dữ liệu), ghép báo cáo
 
-**Phần A. Dựng dự án (ngày 1)**
-1. ~~Khung thư mục, `requirements.txt`, `utils.py`, khung README~~ (đã có sẵn).
-2. Mời 5 bạn vào repo (Settings → Collaborators), gửi link nhóm chat.
+**Phần A. Dựng dự án** ✅ (đã xong, còn việc mời 5 bạn vào repo: Settings → Collaborators)
 
-**Phần B. Mục 2: Chuẩn bị dữ liệu** trong `src/s2_data.py`
-1. Tải zip UCI về `data/raw/`, giải nén ra `LD2011_2014.txt` (khoảng vài trăm MB, đã có trong `.gitignore`).
-2. Đọc: `pd.read_csv(path, sep=";", decimal=",", index_col=0, parse_dates=True)`; ghi số dòng, số cột, khoảng thời gian.
-3. Lọc 2012-01-01 đến 2014-12-31; `load = df.sum(axis=1)`; `resample("h").mean()`.
-4. Xử lý giờ đổi giờ: ngày đổi giờ tháng 3 (giờ 1:00 bằng 0) → coi là thiếu, nội suy; ngày tháng 10 (giờ cộng dồn 2 giờ) → chia đôi hoặc nội suy. Ghi rõ đã xử lý bao nhiêu giờ.
-5. Tải thời tiết Open-Meteo (URL mục 4) bằng `requests`, lưu `data/raw/weather_lisbon_hourly.csv`; đổi tên cột như bảng mục 4.
-6. Ghép 2 bảng theo `Datetime` (inner join); kiểm tra không trùng, không thiếu (`asfreq("h")`, `interpolate(method="time")` nếu cần).
-7. Lưu `data/processed/load_weather_hourly.csv`. **Báo nhóm ngay.**
-8. Vẽ nhanh 4 biến trên 4 hàng chung trục thời gian (`s2_4bien.png`) để kiểm tra ghép đúng.
+**Phần B. Mục 2: Chuẩn bị dữ liệu** ✅ trong `src/s2_data.py` (chi tiết ở `parts/s2_report.md`, `parts/s2_process.md`)
+1. Tải `LD2011_2014.txt` (thử UCI trước, không được thì dùng bản sao trên GitHub, kiểm tra mã băm SHA-256).
+2. Gộp điện theo giờ như mục 4, sửa 6 giờ đổi giờ.
+3. Tải 3 file ISD 2012 đến 2014, đọc định dạng cố định độ rộng, bỏ giá trị có mã chất lượng xấu, tính độ ẩm, đổi giờ UTC sang giờ Lisbon, trung bình theo giờ.
+4. Điền giờ thiếu thời tiết: đoạn ngắn nội suy tuyến tính; đoạn dài (10 đến 24 giờ) lấy trung bình cùng giờ hôm trước và hôm sau.
+5. Lưu `data/processed/load_weather_hourly.csv`; hình `s2_4bien.png`, `s2_dst.png`.
 
 **Phần C. README.md** (4 phần như các Lab trước): giới thiệu, Data Introduction (2 nguồn dữ liệu và lý do phải ghép thời tiết), môi trường, cài đặt và chạy (gồm bước tải dữ liệu vì `data/raw` không có trên Git), bảng phân công.
 
@@ -256,11 +253,12 @@ def metrics(y_true, y_pred):
 - `merge`/`join` theo index thời gian.
 
 **Kết quả phải nộp**
-- [ ] `src/s2_data.py` chạy được, `data/processed/load_weather_hourly.csv`
-- [ ] Hình `s2_4bien.png`
-- [ ] `parts/s2_report.md`: 2 nguồn dữ liệu, số giờ, khoảng thời gian, các giờ đã sửa, thống kê mô tả 4 biến
-- [ ] `parts/s2_process.md`
-- [ ] README; cuối kỳ: `report.md`, `process.md`, `main.py`
+- [x] `src/s2_data.py` chạy được, `data/processed/load_weather_hourly.csv`
+- [x] Hình `s2_4bien.png`, `s2_dst.png`
+- [x] `parts/s2_report.md`: 2 nguồn dữ liệu, số giờ, khoảng thời gian, các giờ đã sửa, thống kê mô tả 4 biến
+- [x] `parts/s2_process.md`
+- [x] README, khung `report.md`, `process.md` (mục 1, 2 đã viết), `main.py`
+- [ ] Cuối kỳ: ghép `report.md`, `process.md` từ phần của 5 bạn
 
 ---
 

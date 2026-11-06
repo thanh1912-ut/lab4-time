@@ -25,6 +25,12 @@ ORDER = [
 ]
 
 if __name__ == "__main__":
+    # load_weather_hourly.csv đã có trên Git. Chỉ chạy lại s2_data.py (tải khoảng 710 MB)
+    # khi chưa có file này hoặc khi gọi: python src/main.py --rebuild-data
+    data_file = SRC.parent / "data" / "processed" / "load_weather_hourly.csv"
+    if data_file.exists() and "--rebuild-data" not in sys.argv:
+        ORDER.remove("s2_data.py")
+        print("Đã có", data_file.name, "-> bỏ qua s2_data.py (thêm --rebuild-data để tạo lại)")
     for name in ORDER:
         print(f"\n===== {name} =====")
         runpy.run_path(str(SRC / name), run_name="__main__")
