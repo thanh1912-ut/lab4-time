@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+.DS_Store
+# Dữ liệu gốc quá lớn cho GitHub (giới hạn 100 MB): tải lại bằng src/s2_data.py
+data/raw/*
+!data/raw/.gitkeep
