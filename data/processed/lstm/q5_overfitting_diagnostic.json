@@ -1,0 +1,18 @@
+{
+  "best_validation_epoch": 50,
+  "last_epoch": 50,
+  "epochs_after_best": 0,
+  "train_mse_at_best_validation": 0.00603444641456,
+  "last_train_mse": 0.00603444641456,
+  "best_validation_mse": 0.0107377525418996,
+  "last_validation_mse": 0.0107377525418996,
+  "train_mse_delta": 0.0,
+  "validation_mse_delta": 0.0,
+  "train_mse_drop_pct": -0.0,
+  "validation_mse_rise_pct": 0.0,
+  "tail_epochs": 1,
+  "tail_mean_train_mse": 0.00603444641456,
+  "tail_mean_validation_mse": 0.0107377525418996,
+  "sustained_divergence": false,
+  "diagnostic_rule": "at least 5 epochs after best validation; train falls >1% and validation rises >1%; final up-to-5-epoch means agree"
+}
