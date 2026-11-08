@@ -1,178 +1,597 @@
+
 """
-Mục 10: Đánh giá và so sánh các mô hình.
+Mục 10: Đánh giá và so sánh các mô hình dự báo.
 Người thực hiện: Bao Dinh
+
+So sánh:
+- Naive
+- Seasonal Naive (24h)
+- VAR
+- XGBoost
+- LSTM
+
+Chỉ sử dụng dữ liệu dự báo thực tế, không tạo dữ liệu giả.
 """
-import os
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from utils import load_data, COLS, FIG, PROCESSED, metrics
+from utils import load_data, PROCESSED, FIG
 
 
-def load_or_mock_predictions(model_name: str, file_name: str, y_true: np.ndarray):
-    file_path = os.path.join(PROCESSED, file_name)
-    if os.path.exists(file_path):
-        try:
-            df_pred = pd.read_csv(file_path)
-            pred_col = 'pred' if 'pred' in df_pred.columns else df_pred.columns[-1]
-            print(f"Đã tải dữ liệu dự báo thực tế cho {model_name} từ {file_name}")
-            return df_pred[pred_col].values[-len(y_true):]
-        except Exception as e:
-            print(f"Lỗi khi đọc {file_name}: {e}. Đang dùng dữ liệu mô phỏng.")
-            
-    print(f"Cảnh báo: Chưa có file {file_name}. Đang tạo dữ liệu dự báo song song không cắt chéo cho {model_name}.")
-    np.random.seed(42)
-    
-    # Độ lệch khoảng cách cố định (Offset song song) - Loại bỏ triệt để hiện tượng cắt chéo
-    if model_name == 'VAR':
-        # VAR: Chạy song song phía TRÊN đường thực tế (+16 MW)
-        pred = y_true + 16.0 + np.random.normal(0, 1.2, size=len(y_true))
-    elif model_name == 'XGBoost':
-        # XGBoost: Chạy song song phía DƯỚI đường thực tế (-16 MW)
-        pred = y_true - 16.0 + np.random.normal(0, 1.2, size=len(y_true))
-    else:  # LSTM
-        # LSTM: Chạy song song phía TRÊN nhẹ (+7 MW)
-        pred = y_true + 7.0 + np.random.normal(0, 0.8, size=len(y_true))
-        
-    return pred
+# ============================================================
+# 1. CẤU HÌNH
+# ============================================================
 
+TRAIN_RATIO = 0.70
+VAL_RATIO = 0.15
+
+MODEL_FILES = {
+    "VAR": "pred_var.csv",
+    "XGBoost": "pred_xgb.csv",
+    "LSTM": "pred_lstm.csv",
+}
+
+MODEL_COLORS = {
+    "VAR": "#0066cc",
+    "XGBoost": "#009933",
+    "LSTM": "#cc0000",
+}
+
+
+# ============================================================
+# 2. ĐỌC VÀ CHUẨN HÓA FILE DỰ BÁO
+# ============================================================
+
+def load_prediction(model_name, file_name):
+    """
+    Đọc file dự báo và chuẩn hóa về:
+    Datetime, y_true (nếu có), y_pred.
+    """
+
+    file_path = PROCESSED / file_name
+
+    if not file_path.exists():
+        raise FileNotFoundError(
+            f"Không tìm thấy file {file_path}. "
+            f"Vui lòng kiểm tra dữ liệu của mô hình {model_name}."
+        )
+
+    df = pd.read_csv(file_path)
+
+    if df.empty:
+        raise ValueError(f"File {file_name} không có dữ liệu.")
+
+    # Chuẩn hóa tên cột
+    df.columns = [str(c).strip().lower() for c in df.columns]
+
+    # Tìm cột thời gian
+    datetime_candidates = [
+        "datetime", "date", "timestamp", "time"
+    ]
+
+    datetime_col = next(
+        (c for c in datetime_candidates if c in df.columns),
+        None
+    )
+
+    if datetime_col is None:
+        raise ValueError(
+            f"{file_name} thiếu cột thời gian. "
+            f"Các cột hiện có: {list(df.columns)}"
+        )
+
+    # Tìm cột dự báo
+    prediction_candidates = [
+        "y_pred", "pred", "prediction",
+        "predicted", "forecast", "yhat", "load_pred"
+    ]
+
+    pred_col = next(
+        (c for c in prediction_candidates if c in df.columns),
+        None
+    )
+
+    # Tìm cột giá trị thực tế
+    actual_candidates = [
+        "y_true", "actual", "true",
+        "actual_load", "load_actual"
+    ]
+
+    actual_col = next(
+        (c for c in actual_candidates if c in df.columns),
+        None
+    )
+
+    # Nếu không nhận diện được tên cột dự báo,
+    # chỉ chấp nhận khi còn đúng một cột số có thể là dự báo.
+    if pred_col is None:
+        excluded = {datetime_col, actual_col}
+
+        numeric_candidates = [
+            c for c in df.columns
+            if c not in excluded
+            and pd.api.types.is_numeric_dtype(df[c])
+        ]
+
+        if len(numeric_candidates) != 1:
+            raise ValueError(
+                f"Không xác định được cột dự báo trong {file_name}. "
+                f"Các cột hiện có: {list(df.columns)}"
+            )
+
+        pred_col = numeric_candidates[0]
+
+    # Chuyển đổi dữ liệu
+    df[datetime_col] = pd.to_datetime(
+        df[datetime_col], errors="coerce"
+    )
+
+    df[pred_col] = pd.to_numeric(
+        df[pred_col], errors="coerce"
+    )
+
+    if actual_col is not None:
+        df[actual_col] = pd.to_numeric(
+            df[actual_col], errors="coerce"
+        )
+
+    # Bỏ các dòng thiếu thời gian hoặc dự báo
+    df = df.dropna(subset=[datetime_col, pred_col])
+
+    # Kiểm tra thời gian trùng lặp
+    if df[datetime_col].duplicated().any():
+        raise ValueError(
+            f"{file_name} có thời gian bị trùng lặp."
+        )
+
+    df = df.set_index(datetime_col).sort_index()
+
+    result = pd.DataFrame(index=df.index)
+
+    result["y_pred"] = df[pred_col]
+
+    if actual_col is not None:
+        result["y_true"] = df[actual_col]
+
+    print(
+        f"Đã đọc {model_name}: "
+        f"{len(result)} dòng từ {file_name}"
+    )
+
+    return result
+
+
+# ============================================================
+# 3. TÍNH CÁC CHỈ SỐ ĐÁNH GIÁ
+# ============================================================
+
+def calculate_metrics(y_true, y_pred):
+    """
+    Tính RMSE, MAE, MAPE.
+    """
+
+    y_true = np.asarray(y_true, dtype=float)
+    y_pred = np.asarray(y_pred, dtype=float)
+
+    if len(y_true) != len(y_pred):
+        raise ValueError("Hai mảng dữ liệu không cùng độ dài.")
+
+    if len(y_true) == 0:
+        raise ValueError("Không có dữ liệu để đánh giá.")
+
+    error = y_true - y_pred
+
+    rmse = np.sqrt(np.mean(error ** 2))
+    mae = np.mean(np.abs(error))
+
+    # Tránh chia cho 0
+    denominator = np.maximum(np.abs(y_true), 1e-8)
+
+    mape = np.mean(
+        np.abs(error) / denominator
+    ) * 100
+
+    return {
+        "RMSE": round(float(rmse), 2),
+        "MAE": round(float(mae), 2),
+        "MAPE (%)": round(float(mape), 2),
+    }
+
+
+# ============================================================
+# 4. CHƯƠNG TRÌNH SO SÁNH
+# ============================================================
 
 def compare_all_models():
-    print("=================================================================")
+
+    print("=" * 65)
     print("LAB 4 - MỤC 10: MODEL EVALUATION AND COMPARISON")
     print("Người thực hiện: Bao Dinh")
-    print("=================================================================\n")
-    
-    # 1. Tải dữ liệu và lấy tập Test
-    df = load_data()
-    n_samples = len(df)
-    n_train = int(n_samples * 0.7)
-    n_val = int(n_samples * 0.15)
-    
-    df_test = df.iloc[n_train + n_val:].copy()
-    y_true = df_test['load'].values
-    
-    # 2. Baseline Models
-    preds_dict = {}
-    preds_dict['Naive'] = df['load'].shift(1).iloc[n_train + n_val:].values
-    preds_dict['Seasonal Naive (24h)'] = df['load'].shift(24).iloc[n_train + n_val:].values
-    
-    # 3. Đọc/Tạo dự báo 3 mô hình
-    model_files = {
-        'VAR': 'pred_var.csv',
-        'XGBoost': 'pred_xgb.csv',
-        'LSTM': 'pred_lstm.csv'
-    }
-    
-    for model_name, file_name in model_files.items():
-        preds_dict[model_name] = load_or_mock_predictions(model_name, file_name, y_true)
+    print("=" * 65)
 
-    # 4. Tính toán chỉ số RMSE, MAE, MAPE
-    summary_list = []
-    for model_name, y_pred in preds_dict.items():
-        valid_mask = ~np.isnan(y_pred)
-        yt = y_true[valid_mask]
-        yp = y_pred[valid_mask]
-        
-        rmse_val = np.sqrt(np.mean((yt - yp) ** 2))
-        mae_val = np.mean(np.abs(yt - yp))
-        mape_val = np.mean(np.abs((yt - yp) / (np.abs(yt) + 1e-8))) * 100
-        
-        summary_list.append({
-            'Model': model_name,
-            'RMSE': round(rmse_val, 2),
-            'MAE': round(mae_val, 2),
-            'MAPE (%)': round(mape_val, 2)
-        })
-        
-    df_metrics = pd.DataFrame(summary_list).set_index('Model')
-    print("\n--- BẢNG SO SÁNH CHỈ SỐ LỖI ---")
-    print(df_metrics)
-    
-    os.makedirs(PROCESSED, exist_ok=True)
-    csv_out_path = os.path.join(PROCESSED, "compare_metrics.csv")
-    df_metrics.to_csv(csv_out_path)
-    print(f"\nĐã lưu bảng so sánh vào: {csv_out_path}")
-    
-    os.makedirs(FIG, exist_ok=True)
-    
-    # 5. ĐỒ THỊ 3 TẦNG SONG SONG HOÀN HẢO (s10_1tuan.png)
-    fig, axes = plt.subplots(3, 1, figsize=(12, 8.5), sharex=True, sharey=True)
-    hours_view = min(48, len(y_true))
-    x_range = range(hours_view)
-    
-    plot_configs = [
-        ('VAR', '#0066cc', 'VAR (Mô hình chuỗi thời gian)'),
-        ('XGBoost', '#009933', 'XGBoost (Mô hình cây quyết định)'),
-        ('LSTM', '#cc0000', 'LSTM (Mô hình Deep Learning)')
+    # --------------------------------------------------------
+    # 4.1. Đọc dữ liệu gốc
+    # --------------------------------------------------------
+
+    df = load_data().sort_index()
+
+    if not df.index.is_unique:
+        raise ValueError("Dữ liệu gốc có thời gian trùng lặp.")
+
+    if "load" not in df.columns:
+        raise ValueError("Dữ liệu gốc thiếu cột load.")
+
+    n_samples = len(df)
+
+    n_train = int(n_samples * TRAIN_RATIO)
+    n_val = int(n_samples * VAL_RATIO)
+
+    test_start = n_train + n_val
+
+    df_test = df.iloc[test_start:].copy()
+
+    if df_test.empty:
+        raise ValueError("Tập Test không có dữ liệu.")
+
+    print(f"\nTổng số mẫu: {n_samples}")
+    print(f"Train: {n_train}")
+    print(f"Validation: {n_val}")
+    print(f"Test: {len(df_test)}")
+
+    # --------------------------------------------------------
+    # 4.2. Tạo DataFrame dự báo chung
+    # --------------------------------------------------------
+
+    comparison = pd.DataFrame(index=df_test.index)
+
+    comparison.index.name = "Datetime"
+
+    comparison["Actual"] = df_test["load"]
+
+    # Baseline 1: Naive
+    comparison["Naive"] = (
+        df["load"].shift(1).reindex(df_test.index)
+    )
+
+    # Baseline 2: Seasonal Naive 24h
+    comparison["Seasonal Naive (24h)"] = (
+        df["load"].shift(24).reindex(df_test.index)
+    )
+
+    # --------------------------------------------------------
+    # 4.3. Đọc ba mô hình thực tế
+    # --------------------------------------------------------
+
+    for model_name, file_name in MODEL_FILES.items():
+
+        df_pred = load_prediction(model_name, file_name)
+
+        # Đối chiếu thời gian và lấy dự báo
+        comparison[model_name] = (
+            df_pred["y_pred"].reindex(comparison.index)
+        )
+
+        # Nếu file có giá trị thực tế, kiểm tra với dữ liệu gốc
+        if "y_true" in df_pred.columns:
+
+            actual_from_model = (
+                df_pred["y_true"].reindex(comparison.index)
+            )
+
+            valid = (
+                comparison["Actual"].notna()
+                & actual_from_model.notna()
+            )
+
+            if valid.any():
+
+                if not np.allclose(
+                    comparison.loc[valid, "Actual"],
+                    actual_from_model.loc[valid],
+                    rtol=1e-4,
+                    atol=1e-3
+                ):
+                    raise ValueError(
+                        f"Dữ liệu thực tế trong {file_name} "
+                        "không khớp với tập Test gốc. "
+                        "Không thể so sánh công bằng."
+                    )
+
+    # --------------------------------------------------------
+    # 4.4. Đồng bộ dữ liệu
+    # --------------------------------------------------------
+
+    # Chỉ đánh giá trên những thời điểm mà tất cả mô hình
+    # đều có dự báo và giá trị thực tế.
+    comparison = comparison.replace(
+        [np.inf, -np.inf], np.nan
+    )
+
+    comparison = comparison.dropna()
+
+    if comparison.empty:
+        raise ValueError(
+            "Không có thời điểm chung giữa ba mô hình. "
+            "Hãy kiểm tra lại Datetime trong các file CSV."
+        )
+
+    if len(comparison) < 2:
+        raise ValueError(
+            "Số lượng thời điểm chung quá ít để đánh giá."
+        )
+
+    print(
+        f"\nSố thời điểm chung dùng để so sánh: "
+        f"{len(comparison)}"
+    )
+
+    print(
+        f"Thời gian bắt đầu: {comparison.index.min()}"
+    )
+
+    print(
+        f"Thời gian kết thúc: {comparison.index.max()}"
+    )
+
+    # --------------------------------------------------------
+    # 4.5. Tính metrics
+    # --------------------------------------------------------
+
+    summary = []
+
+    model_names = [
+        "Naive",
+        "Seasonal Naive (24h)",
+        "VAR",
+        "XGBoost",
+        "LSTM",
     ]
-    
-    for i, (m_name, color, label_name) in enumerate(plot_configs):
-        y_p = preds_dict[m_name][:hours_view]
-        y_t = y_true[:hours_view]
-        
-        # Đường thực tế (đen đậm) và đường dự báo (màu sắc chạy song song)
-        axes[i].plot(x_range, y_t, label='Actual Load (Thực tế)', color='#1a1a1a', linewidth=2.2, zorder=5)
-        axes[i].plot(x_range, y_p, label=f'Dự báo {m_name}', linestyle='-', color=color, linewidth=2.0, zorder=6)
-        axes[i].fill_between(x_range, y_t, y_p, color=color, alpha=0.15, label='Khoảng lệch')
-        
-        axes[i].set_ylabel("Load (MW)", fontsize=10)
-        axes[i].legend(loc='upper right', ncol=3, frameon=True, facecolor='white', framealpha=0.95, edgecolor='none', fontsize=9)
-        
-        # Lưới ngang mờ, loại bỏ đường kẻ dọc và viền thừa
-        axes[i].grid(False)
-        axes[i].grid(axis='y', color='#e5e5e5', linestyle='-', linewidth=0.8)
-        
-        axes[i].spines['top'].set_visible(False)
-        axes[i].spines['right'].set_visible(False)
-        axes[i].spines['left'].set_color('#888888')
-        axes[i].spines['bottom'].set_color('#888888')
-        
-        axes[i].set_title(f"Đối sánh chi tiết: Actual vs {label_name}", fontsize=10.5, fontweight='bold', loc='left', pad=6)
-        
-    fig.suptitle("SO SÁNH DỰ BÁO TIÊU THỤ ĐIỆN NĂNG GIỮA CÁC MÔ HÌNH (48h Tập Test)", fontsize=12.5, fontweight='bold', y=0.98)
-    axes[2].set_xlabel("Thời gian (Giờ)", fontsize=10)
-    
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
-    fig1_path = os.path.join(FIG, "s10_1tuan.png")
-    plt.savefig(fig1_path, bbox_inches='tight', dpi=300)
-    plt.close()
-    
-    # 6. ĐỒ THỊ METRICS (s10_metrics.png)
-    df_metrics[['RMSE', 'MAE']].plot(kind='bar', figsize=(10, 5), colormap='viridis')
-    plt.title("So sánh chỉ số lỗi RMSE và MAE giữa các mô hình", fontsize=12, fontweight='bold')
-    plt.ylabel("Giá trị lỗi (MW)")
-    plt.xticks(rotation=0)
-    plt.grid(axis='y', linestyle='--', alpha=0.7)
-    fig2_path = os.path.join(FIG, "s10_metrics.png")
-    plt.savefig(fig2_path, bbox_inches='tight', dpi=300)
-    plt.close()
-    
-    # 7. ĐỒ THỊ LỖI THEO GIỜ (s10_loi_theo_gio.png)
-    plt.figure(figsize=(11, 5))
-    df_test_df = df_test.copy()
-    df_test_df['hour'] = df_test_df.index.hour
-    
-    for model_name in ['Seasonal Naive (24h)', 'VAR', 'XGBoost', 'LSTM']:
-        yp = preds_dict[model_name]
-        df_test_df[f'error_{model_name}'] = np.abs(df_test_df['load'].values - yp)
-        mae_by_hour = df_test_df.groupby('hour')[f'error_{model_name}'].mean()
-        plt.plot(mae_by_hour.index, mae_by_hour.values, marker='o', label=model_name, linewidth=1.8)
-        
-    plt.title("Lỗi MAE trung bình theo từng khung giờ trong ngày (0..23h)", fontsize=12, fontweight='bold')
-    plt.xlabel("Khung giờ trong ngày (Giờ)")
-    plt.ylabel("MAE (MW)")
-    plt.xticks(range(0, 24))
-    plt.legend()
-    plt.grid(True, linestyle='--', alpha=0.6)
-    fig3_path = os.path.join(FIG, "s10_loi_theo_gio.png")
-    plt.savefig(fig3_path, bbox_inches='tight', dpi=300)
-    plt.close()
-    
-    print("\n=================================================")
-    print("HOÀN THÀNH MỤC 10 VÀ XUẤT CÁC BIỂU ĐỒ SO SÁNH")
-    print("=================================================")
+
+    y_true = comparison["Actual"].values
+
+    for model_name in model_names:
+
+        y_pred = comparison[model_name].values
+
+        result = calculate_metrics(y_true, y_pred)
+
+        result["Model"] = model_name
+
+        summary.append(result)
+
+    df_metrics = (
+        pd.DataFrame(summary)
+        .set_index("Model")
+    )
+
+    df_metrics = df_metrics[
+        ["RMSE", "MAE", "MAPE (%)"]
+    ]
+
+    print("\n" + "=" * 65)
+    print("BẢNG SO SÁNH CHỈ SỐ LỖI")
+    print("=" * 65)
+
+    print(df_metrics.to_string())
+
+    # --------------------------------------------------------
+    # 4.6. Xác định mô hình tốt nhất
+    # --------------------------------------------------------
+
+    best_model = df_metrics["RMSE"].idxmin()
+
+    print("\nMÔ HÌNH CÓ RMSE THẤP NHẤT:")
+    print(best_model)
+
+    # --------------------------------------------------------
+    # 4.7. Xuất CSV
+    # --------------------------------------------------------
+
+    PROCESSED.mkdir(parents=True, exist_ok=True)
+
+    metrics_path = PROCESSED / "compare_metrics.csv"
+
+    df_metrics.to_csv(
+        metrics_path,
+        encoding="utf-8-sig"
+    )
+
+    comparison_path = PROCESSED / "compare_predictions.csv"
+
+    comparison.to_csv(
+        comparison_path,
+        encoding="utf-8-sig"
+    )
+
+    print(f"\nĐã lưu bảng metrics: {metrics_path}")
+    print(f"Đã lưu dữ liệu so sánh: {comparison_path}")
+
+    # --------------------------------------------------------
+    # 4.8. Biểu đồ Actual vs Prediction
+    # --------------------------------------------------------
+
+    FIG.mkdir(parents=True, exist_ok=True)
+
+    hours_view = min(48, len(comparison))
+
+    plot_data = comparison.iloc[:hours_view]
+
+    fig, axes = plt.subplots(
+        3, 1,
+        figsize=(13, 9),
+        sharex=True
+    )
+
+    for i, model_name in enumerate(
+        ["VAR", "XGBoost", "LSTM"]
+    ):
+
+        color = MODEL_COLORS[model_name]
+
+        axes[i].plot(
+            plot_data.index,
+            plot_data["Actual"],
+            color="black",
+            linewidth=1.8,
+            label="Actual"
+        )
+
+        axes[i].plot(
+            plot_data.index,
+            plot_data[model_name],
+            color=color,
+            linewidth=1.6,
+            label=f"{model_name} Prediction"
+        )
+
+        axes[i].set_title(
+            f"Actual vs {model_name}",
+            fontsize=11,
+            fontweight="bold"
+        )
+
+        axes[i].set_ylabel("Load (MW)")
+
+        axes[i].legend(loc="upper right")
+
+        axes[i].grid(
+            axis="y",
+            linestyle="--",
+            alpha=0.4
+        )
+
+    axes[-1].set_xlabel("Datetime")
+
+    fig.suptitle(
+        "SO SÁNH DỰ BÁO GIỮA BA MÔ HÌNH (48 GIỜ)",
+        fontsize=13,
+        fontweight="bold"
+    )
+
+    fig.autofmt_xdate()
+
+    plt.tight_layout()
+
+    plt.savefig(
+        FIG / "s10_1tuan.png",
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close(fig)
+
+    # --------------------------------------------------------
+    # 4.9. Biểu đồ RMSE và MAE
+    # --------------------------------------------------------
+
+    fig, ax = plt.subplots(figsize=(11, 5))
+
+    df_metrics[["RMSE", "MAE"]].plot(
+        kind="bar",
+        ax=ax
+    )
+
+    ax.set_title(
+        "SO SÁNH RMSE VÀ MAE GIỮA CÁC MÔ HÌNH",
+        fontweight="bold"
+    )
+
+    ax.set_ylabel("Giá trị lỗi (MW)")
+
+    ax.set_xlabel("Mô hình")
+
+    ax.tick_params(axis="x", rotation=0)
+
+    ax.grid(
+        axis="y",
+        linestyle="--",
+        alpha=0.5
+    )
+
+    plt.tight_layout()
+
+    plt.savefig(
+        FIG / "s10_metrics.png",
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close(fig)
+
+    # --------------------------------------------------------
+    # 4.10. Biểu đồ lỗi theo giờ
+    # --------------------------------------------------------
+
+    error_df = pd.DataFrame(index=comparison.index)
+
+    error_df["hour"] = comparison.index.hour
+
+    for model_name in model_names:
+
+        error_df[model_name] = np.abs(
+            comparison["Actual"] - comparison[model_name]
+        )
+
+    mae_by_hour = error_df.groupby("hour").mean()
+
+    fig, ax = plt.subplots(figsize=(12, 5))
+
+    for model_name in model_names:
+
+        ax.plot(
+            mae_by_hour.index,
+            mae_by_hour[model_name],
+            marker="o",
+            linewidth=1.5,
+            label=model_name
+        )
+
+    ax.set_title(
+        "MAE TRUNG BÌNH THEO TỪNG GIỜ TRONG NGÀY",
+        fontweight="bold"
+    )
+
+    ax.set_xlabel("Giờ trong ngày")
+
+    ax.set_ylabel("MAE (MW)")
+
+    ax.set_xticks(range(24))
+
+    ax.legend()
+
+    ax.grid(
+        linestyle="--",
+        alpha=0.5
+    )
+
+    plt.tight_layout()
+
+    plt.savefig(
+        FIG / "s10_loi_theo_gio.png",
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.close(fig)
+
+    # --------------------------------------------------------
+    # 4.11. Hoàn thành
+    # --------------------------------------------------------
+
+    print("\n" + "=" * 65)
+    print("HOÀN THÀNH MỤC 10")
+    print("=" * 65)
+
+    print(f"Mô hình có RMSE thấp nhất: {best_model}")
+
+    print("\nCác biểu đồ đã lưu:")
+    print("- s10_1tuan.png")
+    print("- s10_metrics.png")
+    print("- s10_loi_theo_gio.png")
+
+    print("\nKhông sử dụng dữ liệu dự báo mô phỏng.")
 
 
 if __name__ == "__main__":
