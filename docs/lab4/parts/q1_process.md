@@ -11,9 +11,9 @@ Quá trình thực hiện gồm năm nội dung chính:
 2. Phân tích tương quan theo mùa và kiểm tra độ lệch nhiệt độ so với 18°C.
 3. Khảo sát tương quan giữa phụ tải hiện tại và nhiệt độ ở các độ trễ từ 0 đến 24 giờ.
 4. Tính lại tương quan sau khi loại bỏ thành phần trung bình theo giờ trong ngày.
-5. Trực quan hóa kết quả, tổng hợp nhận xét và chuẩn bị đối chiếu với feature importance của Câu 3.
+5. Trực quan hóa kết quả, tổng hợp nhận xét và đối chiếu với Feature Importance của XGBoost trong Câu 3.
 
-Câu 1 là bài toán phân tích dữ liệu, không thực hiện huấn luyện hoặc đánh giá mô hình dự báo.
+Câu 1 là bài toán phân tích dữ liệu, không trực tiếp thực hiện huấn luyện hoặc đánh giá mô hình dự báo. Phần đối chiếu với Câu 3 sử dụng kết quả do Hoàng Thắng thực hiện.
 
 ## 2. Dữ liệu và môi trường thực hiện
 
@@ -308,6 +308,40 @@ fig.savefig(
 
 Biểu đồ thể hiện tương quan theo độ trễ, không phải kết quả dự báo của một mô hình học máy.
 
+### Bước 8. Đối chiếu kết quả với Feature Importance của Câu 3
+
+Sau khi Hoàng Thắng hoàn thành Câu 3, nhóm sử dụng kết quả từ `q3_report.md` và `q3_process.md` để đối chiếu với phân tích tương quan ở Câu 1.
+
+**8.1. Thu thập kết quả**
+
+Từ Câu 1, lấy hệ số Pearson và Spearman của ba biến thời tiết. Từ Câu 3, lấy tỷ lệ Gain của các nhóm đặc trưng nhiệt độ, độ ẩm và tốc độ gió.
+
+| Biến thời tiết | Pearson | Spearman | Gain |
+|---|---:|---:|---:|
+| Nhiệt độ | 0.6559 | 0.5922 | 0.94% |
+| Độ ẩm | -0.5277 | -0.4922 | 0.47% |
+| Tốc độ gió | 0.2803 | 0.3002 | 0.39% |
+
+**8.2. So sánh thứ hạng**
+
+Sắp xếp các biến theo giá trị tuyệt đối của tương quan và tỷ lệ Gain. Kết quả cho cùng thứ hạng: nhiệt độ, độ ẩm, tốc độ gió.
+
+Việc đối chiếu chỉ tập trung vào thứ hạng vì hệ số tương quan và Gain có ý nghĩa khác nhau.
+
+**8.3. Đối chiếu độ trễ và quan hệ phi tuyến**
+
+So sánh kết quả tương quan tại lag 0 và lag 24 của Câu 1 với vai trò của `load_lag24` trong Câu 3.
+
+Tham khảo biểu đồ PDP của `temperature_lag1` để nhận xét thêm về phản ứng phi tuyến của mô hình ở vùng nhiệt độ cao. Không sử dụng PDP làm bằng chứng trực tiếp về quan hệ nhân quả hoặc khẳng định quan hệ hình chữ U.
+
+**8.4. Đối chiếu Ablation Study**
+
+Sử dụng kết quả RMSE của ba cấu hình Full Model, Load + Rolling và Load Only trong Câu 3.
+
+Để xem xét riêng việc bổ sung thời tiết, so sánh Full Model với Load + Rolling. Validation RMSE giảm từ 4.71 xuống 4.52 MW, nhưng Test RMSE gần như không cải thiện (6.17 so với 6.16 MW).
+
+Các nhận xét được tổng hợp trong Mục 4 của `q1_report.md`. Bước này sử dụng kết quả đã có, không yêu cầu huấn luyện lại XGBoost.
+
 ## 4. Tổ chức mã nguồn
 
 | Tệp | Vai trò |
@@ -318,6 +352,11 @@ Biểu đồ thể hiện tương quan theo độ trễ, không phải kết qu�
 | `docs/lab4/figures/q1_lag_corr.png` | Biểu đồ tương quan theo độ trễ |
 | `docs/lab4/parts/q1_report.md` | Trình bày kết quả và nhận xét |
 | `docs/lab4/parts/q1_process.md` | Ghi lại quy trình thực hiện |
+
+Nguồn dùng để đối chiếu:
+
+- `docs/lab4/parts/q3_report.md`: Kết quả Feature Importance, Ablation Study và PDP.
+- `docs/lab4/parts/q3_process.md`: Phương pháp thực hiện Câu 3.
 
 Trong `q1_weather.py`, các bước phân tích được tổ chức thành các hàm riêng để dễ kiểm tra:
 
@@ -330,6 +369,8 @@ Trong `q1_weather.py`, các bước phân tích được tổ chức thành các
 | `adjusted_correlations()` | Tính tương quan sau khi loại bỏ trung bình theo giờ |
 | `plot_lag_correlations()` | Vẽ và lưu biểu đồ |
 | `main()` | Điều phối các bước và in kết quả |
+
+Phần đối chiếu với Câu 3 được thực hiện khi tổng hợp báo cáo, không bổ sung hàm huấn luyện XGBoost vào `q1_weather.py`.
 
 ## 5. Cách chạy và kiểm tra kết quả
 
@@ -350,6 +391,8 @@ Chương trình thực hiện lần lượt:
 5. Tính tương quan theo độ trễ.
 6. Tính tương quan sau điều chỉnh chu kỳ giờ.
 7. Lưu biểu đồ và in đường dẫn đầu ra.
+
+Phần đối chiếu với Câu 3 sử dụng kết quả báo cáo đã có, không nằm trong lệnh chạy `q1_weather.py`.
 
 ### 5.2. Đối chiếu kết quả
 
@@ -384,7 +427,21 @@ Kiểm tra:
 - Các chú thích không che khuất đường biểu diễn.
 - Biểu đồ được hiển thị đúng trong `q1_report.md`.
 
-## 6. Kết quả hoàn thành và công việc tiếp theo
+### 5.4. Kiểm tra phần đối chiếu với Câu 3
+
+Kiểm tra Mục 4 của `q1_report.md` dựa trên `q3_report.md` và `q3_process.md` của Hoàng Thắng.
+
+Các kết quả cần thống nhất:
+
+- Tỷ lệ Gain: nhiệt độ 0.94%, độ ẩm 0.47%, tốc độ gió 0.39%.
+- Nhóm phụ tải quá khứ chiếm 97.19% tổng Gain.
+- `load_lag24` có Gain 137.72.
+- Validation RMSE của Full Model, Load + Rolling và Load Only lần lượt là 4.52, 4.71 và 5.59 MW.
+- Test RMSE của ba cấu hình lần lượt là 6.17, 6.16 và 7.11 MW.
+
+Các giá trị trên là kết quả được trích từ báo cáo Câu 3, không phải đầu ra trực tiếp của `q1_weather.py`.
+
+## 6. Kết quả hoàn thành
 
 Câu 1 đã hoàn thành các phép phân tích tương quan, kiểm tra theo mùa, độ trễ, điều chỉnh chu kỳ giờ và trực quan hóa kết quả.
 
@@ -395,4 +452,8 @@ Các sản phẩm gồm:
 3. `docs/lab4/parts/q1_report.md`
 4. `docs/lab4/parts/q1_process.md`
 
-**Phần cần bổ sung:** Khi Hoàng Thắng hoàn thành Câu 3, sử dụng kết quả feature importance để đối chiếu với thứ hạng tương quan của các biến thời tiết trong Câu 1. Không cần huấn luyện lại mô hình của Câu 3.
+Phần đối chiếu với Câu 3 được bổ sung dựa trên kết quả Feature Importance, Ablation Study và PDP do Hoàng Thắng thực hiện.
+
+Kết quả đối chiếu cho thấy thứ hạng ba biến thời tiết thống nhất giữa Câu 1 và Câu 3: **nhiệt độ > độ ẩm > tốc độ gió**. Tuy nhiên, kết quả XGBoost cũng cho thấy phụ tải quá khứ giữ vai trò chủ đạo và việc bổ sung thời tiết không cải thiện đồng nhất trên cả Validation và Test.
+
+Nội dung đối chiếu được trình bày chi tiết tại Mục 4 của `q1_report.md`. Không cần thay đổi dữ liệu đầu vào, chạy lại các phép tương quan hoặc huấn luyện lại XGBoost để hoàn thành Câu 1.
