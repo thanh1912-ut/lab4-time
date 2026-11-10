@@ -5,6 +5,11 @@ Chạy từ thư mục gốc: python src/main.py
 """
 import runpy
 import sys
+if sys.stdout.encoding.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parent

@@ -452,13 +452,13 @@ So XGBoost và LSTM theo: sai số trên test, thời gian huấn luyện, số 
 - Feature importance `gain`; ablation study; partial dependence plot.
 
 **Kết quả phải nộp**
-- [ ] `src/m2_xgboost.py`, `q3_xgb_weather.py` chạy được
-- [ ] `data/processed/pred_xgb.csv`
-- [ ] Hình `m2_xgb_1tuan.png`, `m2_learning_curve.png`, `q3_importance_nhom.png`, `q3_importance_lag.png` (+ `q3_pdp_temp.png`)
-- [ ] `parts/m2_report.md`: bảng tune, tham số chọn, sai số test
-- [ ] `parts/q3_report.md`: importance theo nhóm, kết quả ablation, trả lời câu 3
-- [ ] `parts/q6_report.md`: bảng so sánh ML vs DL, trả lời câu 6
-- [ ] 3 file `_process.md` tương ứng
+- [x] `src/m2_xgboost.py`, `q3_xgb_weather.py` chạy được
+- [x] `data/processed/pred_xgb.csv`
+- [x] Hình `m2_xgb_1tuan.png`, `m2_learning_curve.png`, `q3_importance_nhom.png`, `q3_importance_lag.png` (+ `q3_pdp_temp.png`)
+- [x] `parts/m2_report.md`: bảng tune, tham số chọn, sai số test
+- [x] `parts/q3_report.md`: importance theo nhóm, kết quả ablation, trả lời câu 3
+- [x] `parts/q6_report.md`: bảng so sánh ML vs DL, trả lời câu 6
+- [x] 3 file `_process.md` tương ứng
 
 ---
 
