@@ -27,6 +27,7 @@ ORDER = [
     "m3_lstm.py",           # Hoàng Nam
     "q4_q5_lstm.py",        # Hoàng Nam
     "s10_compare.py",       # Bao Dinh
+    "benchmark.py",         # Thành: benchmark bổ sung (CI bootstrap, kiểm định DM)
 ]
 
 if __name__ == "__main__":

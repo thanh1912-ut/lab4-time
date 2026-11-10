@@ -1,0 +1,4 @@
+Model,Tham số,Học (giây),Học + dự báo 3.946 giờ (giây),Chọn cấu hình
+VAR(26),420,0.10610269700009667,1.0424279750000096,"p theo BIC, 1–48 trễ, trên train"
+XGBoost,"154 cây, 16.049 lá",2.8678824190000114,2.879114278999964,"max_depth trong {3, 5, 7, 9}, theo validation"
+LSTM,30.113,145.4,146.068340049,"patience trong {5, 10} × 3 seed, theo validation"

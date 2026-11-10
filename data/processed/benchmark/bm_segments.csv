@@ -1,0 +1,36 @@
+Nhóm,Giá trị,Số giờ,Model,RMSE,MAE
+Khung giờ,12–17 giờ,988,Seasonal naive 24h,17.3613,10.7631
+Khung giờ,12–17 giờ,988,VAR(26),5.8252,4.3753
+Khung giờ,12–17 giờ,988,XGBoost,7.5044,4.5475
+Khung giờ,12–17 giờ,988,LSTM,5.981,4.6308
+Khung giờ,12–17 giờ,988,Kết hợp 3 mô hình,5.5703,4.0191
+Khung giờ,18–23 giờ,990,Seasonal naive 24h,15.1555,9.4621
+Khung giờ,18–23 giờ,990,VAR(26),6.0396,4.2235
+Khung giờ,18–23 giờ,990,XGBoost,6.5063,4.415
+Khung giờ,18–23 giờ,990,LSTM,6.4088,4.6844
+Khung giờ,18–23 giờ,990,Kết hợp 3 mô hình,5.5517,3.8635
+Khung giờ,0–6 giờ,1148,Seasonal naive 24h,5.6519,3.7183
+Khung giờ,0–6 giờ,1148,VAR(26),3.6827,2.3449
+Khung giờ,0–6 giờ,1148,XGBoost,3.2458,2.0378
+Khung giờ,0–6 giờ,1148,LSTM,3.7457,2.7108
+Khung giờ,0–6 giờ,1148,Kết hợp 3 mô hình,3.0058,2.0051
+Khung giờ,7–11 giờ,820,Seasonal naive 24h,13.4502,7.3522
+Khung giờ,7–11 giờ,820,VAR(26),8.552,6.1073
+Khung giờ,7–11 giờ,820,XGBoost,7.0467,4.6588
+Khung giờ,7–11 giờ,820,LSTM,8.3225,6.0773
+Khung giờ,7–11 giờ,820,Kết hợp 3 mô hình,7.1489,5.0432
+Loại ngày,Cuối tuần,1066,Seasonal naive 24h,9.5695,6.9541
+Loại ngày,Cuối tuần,1066,VAR(26),5.9103,4.1315
+Loại ngày,Cuối tuần,1066,XGBoost,5.2065,3.6062
+Loại ngày,Cuối tuần,1066,LSTM,6.5078,4.692
+Loại ngày,Cuối tuần,1066,Kết hợp 3 mô hình,5.2726,3.6925
+Loại ngày,Ngày thường,2640,Seasonal naive 24h,9.897,6.8332
+Loại ngày,Ngày thường,2640,VAR(26),5.7268,3.9385
+Loại ngày,Ngày thường,2640,XGBoost,5.2489,3.5452
+Loại ngày,Ngày thường,2640,LSTM,5.7119,4.1404
+Loại ngày,Ngày thường,2640,Kết hợp 3 mô hình,4.9562,3.3967
+Loại ngày,Lễ / kỳ nghỉ cuối năm,240,Seasonal naive 24h,38.4057,20.1926
+Loại ngày,Lễ / kỳ nghỉ cuối năm,240,VAR(26),9.4334,5.842
+Loại ngày,Lễ / kỳ nghỉ cuối năm,240,XGBoost,14.2493,7.5829
+Loại ngày,Lễ / kỳ nghỉ cuối năm,240,LSTM,8.5705,5.7332
+Loại ngày,Lễ / kỳ nghỉ cuối năm,240,Kết hợp 3 mô hình,8.8891,5.5395

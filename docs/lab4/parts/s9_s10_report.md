@@ -28,7 +28,7 @@ Cách huấn luyện từng mô hình (`data/processed/compare_protocol.csv`):
 | Mô hình | Cách huấn luyện |
 |---|---|
 | VAR | VAR(26), p chọn theo BIC trên train; học một lần trên train |
-| XGBoost | max_depth chọn trong {3, 5, 7, 9} trên validation; học trên train, early stopping theo validation (153 cây) |
+| XGBoost | max_depth chọn trong {3, 5, 7, 9} trên validation; học trên train, early stopping theo validation (154 cây) |
 | LSTM | patience chọn trong {5, 10} trên validation (trung bình 3 seed); xáo trộn cửa sổ train mỗi epoch; seed 42 |
 
 ## Bảng so sánh chính (`data/processed/compare_metrics.csv`)
