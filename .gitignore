@@ -7,3 +7,6 @@ venv/
 # Dữ liệu gốc quá lớn cho GitHub (giới hạn 100 MB): tải lại bằng src/s2_data.py
 data/raw/*
 !data/raw/.gitkeep
+
+# Sinh lại mỗi lần chạy src/s4_s5_preprocess.py (khoảng 52 MB), không đưa lên git
+data/processed/features_flat.csv

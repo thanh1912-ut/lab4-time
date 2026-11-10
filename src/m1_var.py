@@ -82,7 +82,7 @@ def make_predict_fn(diff: bool):
 def run_walk_forward(scaled, scaler, i2, p, diff, refit_every=REFIT_EVERY) -> pd.DataFrame:
     """Walk-forward trên test với VAR(p). Trả về DataFrame y_true, y_pred (thang đo gốc)."""
     pred_z = walk_forward(make_fit_fn(p, diff), make_predict_fn(diff),
-                          scaled, i2, len(scaled), refit_every=refit_every)
+                          scaled, i2, len(scaled), refit_every=refit_every)["prediction"].to_numpy()
     out = pd.DataFrame({
         "y_true": inverse_load(scaled[TARGET].iloc[i2:].to_numpy(), scaler),
         "y_pred": inverse_load(pred_z, scaler),
