@@ -1,0 +1,6 @@
+﻿Model,RMSE,MAE,MAPE (%)
+Naive,25.5,16.34,8.78
+Seasonal Naive (24h),13.42,7.68,3.82
+VAR,6.05,4.06,2.03
+XGBoost,6.07,3.71,1.86
+LSTM,13.96,9.57,4.75
