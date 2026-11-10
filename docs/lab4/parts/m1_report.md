@@ -39,3 +39,13 @@ p theo AIC = 48, p theo BIC = 26. Chọn **p = 26** theo BIC (BIC phạt số th
 | 6.05 | 4.06 | 2.03 |
 
 Hình: `figures/m1_var_1tuan.png`. Thời gian chạy walk-forward: 7 giây.
+
+## Bản dùng cho so sánh công bằng (mục 10)
+Học VAR(26) **một lần trên train**, không refit trên test; mỗi giờ test vẫn dự báo 1 bước từ 26 giờ thật trước đó.
+Cùng luật với XGBoost và LSTM (validation chỉ để chọn cấu hình). File `data/processed/pred_var_fixed.csv`.
+
+| RMSE (MW) | MAE (MW) | MAPE (%) |
+|---|---|---|
+| 6.07 | 4.11 | 2.06 |
+
+Refit mỗi tuần chỉ đổi RMSE -0.02 MW so với bản học một lần.

@@ -3,46 +3,46 @@
   "config": {
     "epochs": 50,
     "batch_size": 64,
-    "patience": 5,
+    "patience": 10,
     "dropout": 0.0,
     "early_stopping": true,
     "seed": 42,
     "window": 24,
     "calendar": true,
-    "shuffle": false,
+    "shuffle": true,
     "learning_rate": 0.001,
-    "data_sha256": "d1782f8e7dc1a7aae06c17699edf6ccaec8bf2f8b958aac9a4da8d108d552ce3",
-    "source_sha256": "0d20c40dd354f5d23b63fa5182c597814196e2dcb343262046e3b39c2d76760d",
+    "data_sha256": "cdadc8311d55c2e992a92792cb558f159a6eca4d1e31fc83896058f31e6edc59",
+    "source_sha256": "000f018405fb346c0e777f26f89aebee3ce31d1d24ddea0105106afd6a17095a",
     "tensorflow": "2.20.0",
-    "numpy": "2.3.5",
-    "pandas": "3.0.1",
-    "python": "3.12.14"
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "python": "3.13.18"
   },
-  "epochs_run": 21,
-  "best_epoch": 16,
-  "selected_epoch": 16,
-  "train_seconds": 175.79,
+  "epochs_run": 44,
+  "best_epoch": 34,
+  "selected_epoch": 34,
+  "train_seconds": 224.331,
   "parameters": 31137,
-  "created_utc": "2026-11-07T12:38:26.883163+00:00",
+  "created_utc": "2026-11-10T10:42:45.936946+00:00",
   "devices": [
     "/physical_device:CPU:0"
   ],
   "units": "MW",
   "split_metrics": {
     "train": {
-      "RMSE": 11.56,
-      "MAE": 8.27,
-      "MAPE(%)": 3.96
+      "RMSE": 5.08,
+      "MAE": 3.6,
+      "MAPE(%)": 1.85
     },
     "validation": {
-      "RMSE": 8.65,
-      "MAE": 6.26,
-      "MAPE(%)": 3.3
+      "RMSE": 5.64,
+      "MAE": 3.96,
+      "MAPE(%)": 2.08
     },
     "test": {
-      "RMSE": 12.4,
-      "MAE": 8.81,
-      "MAPE(%)": 4.2
+      "RMSE": 5.77,
+      "MAE": 3.98,
+      "MAPE(%)": 2.04
     }
   },
   "splits": {

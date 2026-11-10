@@ -1,0 +1,12 @@
+{
+  "patience": 10,
+  "main_seed": 42,
+  "main_name": "lstm_p10_s42",
+  "rule": "patience có RMSE validation trung bình 3 seed thấp nhất; test không dùng để chọn",
+  "mean_validation_rmse": {
+    "5": 6.17,
+    "10": 5.8667
+  },
+  "test_rmse_mean": 6.02,
+  "test_rmse_std": 0.11
+}

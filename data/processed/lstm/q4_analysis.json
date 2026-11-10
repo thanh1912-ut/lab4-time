@@ -1,11 +1,11 @@
 {
-  "calendar_rmse_change_pct": 11.174785100286536,
+  "calendar_rmse_change_pct": 6.026058631921826,
   "recursive": {
     "hours": 48,
     "start": "2014-07-20 14:00:00",
     "end": "2014-07-22 13:00:00",
-    "RMSE": 52.59,
-    "MAE": 39.17,
-    "MAPE(%)": 13.8
+    "RMSE": 12.91,
+    "MAE": 9.25,
+    "MAPE(%)": 3.72
   }
 }

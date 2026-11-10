@@ -23,8 +23,11 @@ from lstm_common import (
 from utils import COLS, PROCESSED, load_data, metrics
 
 SPLITS = {"train": "train", "validation": "val", "test": "test"}
+# Mô hình chính là lần chạy patience đã chọn trên validation, seed 42 (lstm_selection.json).
+MAIN_NAME = json.loads((ROOT / "data" / "processed" / "lstm" / "lstm_selection.json")
+                       .read_text(encoding="utf-8"))["main_name"]
 EXPERIMENTS = [
-    "lstm_main", "lstm_calendar", "lstm_no_early_stopping", "lstm_dropout",
+    MAIN_NAME, "lstm_calendar", "lstm_no_early_stopping", "lstm_dropout",
 ]
 
 
@@ -96,7 +99,7 @@ def check_artifact_consistency(data):
         assert meta["config"]["seed"] == 42
         assert meta["config"]["window"] == 24
         assert meta["config"]["calendar"] == (name == "lstm_calendar")
-        assert meta["config"]["shuffle"] is False
+        assert meta["config"]["shuffle"] is True
         assert meta["parameters"] == (31137 if name == "lstm_calendar" else 30113)
         assert (MODEL_DIR / f"{name}.keras").is_file()
         history = pd.read_csv(RESULTS_DIR / f"{name}_history.csv")
@@ -115,12 +118,12 @@ def check_artifact_consistency(data):
             assert meta["splits"][split]["samples"] == len(frame)
             assert meta["splits"][split]["start"] == str(frame.Datetime.iloc[0])
             assert meta["splits"][split]["end"] == str(frame.Datetime.iloc[-1])
-        if name == "lstm_main":
+        if name == MAIN_NAME:
             main_metadata = meta
         else:
             assert meta["config"]["source_sha256"] == main_metadata["config"]["source_sha256"]
     official = read_prediction(PROCESSED / "pred_lstm.csv", data, "test")
-    cached = read_prediction(RESULTS_DIR / "lstm_main_test.csv", data, "test")
+    cached = read_prediction(RESULTS_DIR / f"{MAIN_NAME}_test.csv", data, "test")
     np.testing.assert_allclose(official["y_pred"], cached["y_pred"], atol=1e-10, rtol=0)
     assert main_metadata["split_metrics"]["test"] == metrics(official.y_true, official.y_pred)
     baseline = pd.read_csv(RESULTS_DIR / "m3_baselines.csv").set_index("Model")
@@ -132,7 +135,7 @@ def check_artifact_consistency(data):
 
 
 def check_model_reload(data, official):
-    result = load_experiment("lstm_main", data)
+    result = load_experiment(MAIN_NAME, data)
     model = result["model"]
     assert model.count_params() == 30113
     first = predict_original(model, data["X_test"][:12], data["scaler"])

@@ -63,7 +63,8 @@ def walk_forward(
     start,
     end,
     refit_every=None,
-    scaler=None
+    scaler=None,
+    train_end=None
 ):
     """
     Dự báo tuần tự từng giờ bằng Walk-forward validation.
@@ -91,6 +92,12 @@ def walk_forward(
     scaler:
         StandardScaler dùng để đưa kết quả về MW.
         Nếu None, kết quả vẫn ở đơn vị chuẩn hóa.
+
+    train_end:
+        Lần huấn luyện đầu chỉ dùng scaled.iloc[:train_end].
+        None = dùng mọi dữ liệu trước start (train + validation).
+        Đặt bằng vị trí cuối train để mô hình học giống XGBoost/LSTM
+        (validation chỉ để chọn cấu hình), dùng cho so sánh công bằng.
 
     Returns:
         DataFrame gồm:
@@ -126,8 +133,12 @@ def walk_forward(
                 or refit_every <= 0):
             raise ValueError("refit_every phải là số nguyên dương hoặc None.")
 
-    # Huấn luyện ban đầu chỉ bằng dữ liệu trước thời điểm start.
-    model = fit_fn(scaled.iloc[:start].copy())
+    if train_end is not None and not (
+            isinstance(train_end, (int, np.integer)) and 1 <= train_end <= start):
+        raise ValueError("train_end phải là số nguyên trong [1, start].")
+
+    # Huấn luyện ban đầu chỉ bằng dữ liệu trước thời điểm start (hoặc trước train_end).
+    model = fit_fn(scaled.iloc[:start if train_end is None else train_end].copy())
 
     predictions = []
 

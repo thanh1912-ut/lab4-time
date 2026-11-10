@@ -1,6 +1,8 @@
 """Hỗ trợ mục 8, câu 4 và 5. Người làm: Hoàng Nam.
 
 Dùng scaler/cửa sổ của nhóm; chia mẫu theo thời điểm của y.
+Train xáo trộn thứ tự các cửa sổ mỗi epoch (validation/test giữ thứ tự thời gian);
+patience chọn trên validation, trung bình 3 seed (xem tune_main).
 """
 from __future__ import annotations
 
@@ -28,6 +30,8 @@ from utils import COLS, L, PROCESSED, SEED, load_data, metrics
 
 RESULTS_DIR = PROCESSED / "lstm"
 MODEL_DIR = RESULTS_DIR / "models"
+PATIENCE_CANDIDATES = (5, 10)   # thử trên validation, cùng công sức với 4 depth của XGBoost
+TUNE_SEEDS = (42, 43, 44)       # seed 42 là mô hình chính; 3 seed để đo độ ổn định
 
 
 def save_json(path, value):
@@ -84,9 +88,13 @@ def tensorflow_runtime():
     return tf
 
 
-def _dataset(X, y=None, batch_size=64):
+def _dataset(X, y=None, batch_size=64, shuffle_seed=None):
+    """shuffle_seed khác None: xáo trộn thứ tự cửa sổ mỗi epoch (chỉ dùng cho train)."""
     tf = tensorflow_runtime()
-    ds = tf.data.Dataset.from_tensor_slices(X if y is None else (X, y)).batch(batch_size)
+    ds = tf.data.Dataset.from_tensor_slices(X if y is None else (X, y))
+    if shuffle_seed is not None:
+        ds = ds.shuffle(len(X), seed=int(shuffle_seed), reshuffle_each_iteration=True)
+    ds = ds.batch(batch_size)
     options = tf.data.Options()
     options.threading.private_threadpool_size = 2
     options.threading.max_intra_op_parallelism = 2
@@ -145,14 +153,15 @@ def load_experiment(name, data):
 
 
 def train_experiment(name, data, epochs=50, batch_size=64, patience=5,
-                     dropout=0.0, early_stopping=True, verbose=2, force=False):
+                     dropout=0.0, early_stopping=True, verbose=2, force=False,
+                     shuffle=True, seed=SEED):
     _validate_name(name)
     if epochs < 1 or batch_size < 1 or patience < 0 or not 0 <= dropout < 1:
         raise ValueError("Cấu hình huấn luyện không hợp lệ.")
     tf = tensorflow_runtime()
     config = {"epochs": int(epochs), "batch_size": int(batch_size), "patience": int(patience),
-              "dropout": float(dropout), "early_stopping": bool(early_stopping), "seed": SEED,
-              "window": data["window"], "calendar": data["calendar"], "shuffle": False,
+              "dropout": float(dropout), "early_stopping": bool(early_stopping), "seed": int(seed),
+              "window": data["window"], "calendar": data["calendar"], "shuffle": bool(shuffle),
               "learning_rate": 0.001, "data_sha256": data["data_sha256"],
               "source_sha256": _source_digest(), "tensorflow": tf.__version__,
               "numpy": np.__version__, "pandas": pd.__version__, "python": platform.python_version()}
@@ -166,7 +175,7 @@ def train_experiment(name, data, epochs=50, batch_size=64, patience=5,
     # Không để metadata cũ xác nhận bộ file bị ghi dở nếu chạy lại bị ngắt.
     meta_path.unlink(missing_ok=True)
     tf.keras.backend.clear_session()
-    tf.keras.utils.set_random_seed(SEED)
+    tf.keras.utils.set_random_seed(int(seed))
     layers = [tf.keras.Input(shape=data["X_train"].shape[1:]), tf.keras.layers.LSTM(64, return_sequences=True)]
     if dropout:
         layers.append(tf.keras.layers.Dropout(dropout))
@@ -181,9 +190,11 @@ def train_experiment(name, data, epochs=50, batch_size=64, patience=5,
         callbacks.append(tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=patience, restore_best_weights=True))
     print(f"[{name}] train={data['X_train'].shape}, val={data['X_val'].shape}, test={data['X_test'].shape}", flush=True)
     started = time.perf_counter()
-    fitted = model.fit(_dataset(data["X_train"], data["y_train"], batch_size),
+    fitted = model.fit(_dataset(data["X_train"], data["y_train"], batch_size,
+                                shuffle_seed=int(seed) if shuffle else None),
                        validation_data=_dataset(data["X_val"], data["y_val"], batch_size),
-                       epochs=epochs, callbacks=callbacks, verbose=verbose, shuffle=False)
+                       epochs=epochs, callbacks=callbacks, verbose=verbose,
+                       shuffle=False)  # Keras bỏ qua tham số này với tf.data; xáo trộn nằm trong _dataset
     elapsed = time.perf_counter() - started
     history = {k: [float(v) for v in values] for k, values in fitted.history.items()}
     if not np.isfinite(np.asarray(list(history.values()))).all():
@@ -213,3 +224,39 @@ def train_experiment(name, data, epochs=50, batch_size=64, patience=5,
     save_json(meta_path, metadata)
     print(f"[{name}] Test: {metadata['split_metrics']['test']}; train {elapsed:.1f}s", flush=True)
     return {"model": model, "history": history, "metadata": metadata, "predictions": predictions}
+
+
+def tune_main(data, epochs=50, batch_size=64, force=False, verbose=2):
+    """Chọn patience cho mô hình chính chỉ bằng validation.
+
+    Mỗi patience trong PATIENCE_CANDIDATES chạy với 3 seed; chọn patience có RMSE
+    validation trung bình thấp nhất. Mô hình chính = patience đã chọn, seed 42.
+    Cột test chỉ để báo cáo độ ổn định, không tham gia chọn.
+    """
+    runs, rows = {}, []
+    for patience in PATIENCE_CANDIDATES:
+        for seed in TUNE_SEEDS:
+            result = train_experiment(f"lstm_p{patience}_s{seed}", data, epochs=epochs,
+                                      batch_size=batch_size, patience=patience, seed=seed,
+                                      verbose=verbose, force=force)
+            runs[(patience, seed)] = result
+            meta, sm = result["metadata"], result["metadata"]["split_metrics"]
+            rows.append({"patience": patience, "seed": seed, "epochs_run": meta["epochs_run"],
+                         "selected_epoch": meta["selected_epoch"], "train_seconds": meta["train_seconds"],
+                         "train_RMSE": sm["train"]["RMSE"], "val_RMSE": sm["validation"]["RMSE"],
+                         "test_RMSE": sm["test"]["RMSE"], "test_MAE": sm["test"]["MAE"],
+                         "test_MAPE": sm["test"]["MAPE(%)"]})
+    table = pd.DataFrame(rows)
+    mean_val = table.groupby("patience")["val_RMSE"].mean()
+    best = int(mean_val.idxmin())
+    chosen = table[table.patience == best]
+    selection = {"patience": best, "main_seed": SEED, "main_name": f"lstm_p{best}_s{SEED}",
+                 "rule": "patience có RMSE validation trung bình 3 seed thấp nhất; test không dùng để chọn",
+                 "mean_validation_rmse": {str(k): round(float(v), 4) for k, v in mean_val.items()},
+                 "test_rmse_mean": round(float(chosen.test_RMSE.mean()), 2),
+                 "test_rmse_std": round(float(chosen.test_RMSE.std(ddof=1)), 2)}
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    table.to_csv(RESULTS_DIR / "lstm_tuning.csv", index=False)
+    save_json(RESULTS_DIR / "lstm_selection.json", selection)
+    print(f"[tune] patience chọn = {best} (val RMSE trung bình {selection['mean_validation_rmse']})", flush=True)
+    return {"selection": selection, "table": table, "main": runs[(best, SEED)], "runs": runs}

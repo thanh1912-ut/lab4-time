@@ -1,0 +1,6 @@
+﻿Model,Cách huấn luyện
+Naive,Không học; dự báo = load giờ trước
+Seasonal Naive (24h),Không học; dự báo = load cùng giờ hôm trước
+VAR,"VAR(26), p chọn theo BIC trên train; học 1 lần trên train; không refit"
+XGBoost,"max_depth chọn trong {3,5,7,9} trên validation; học trên train, early stopping theo validation; không refit"
+LSTM,"patience chọn trong {5,10} trên validation (TB 3 seed); xáo trộn cửa sổ train; seed 42; không refit"
