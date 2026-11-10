@@ -50,6 +50,8 @@ python src/nc_traffic.py    # bài nâng cao, chạy riêng
 
 Kết quả: hình trong `docs/lab4/figures/`, dự đoán và bảng so sánh trong `data/processed/`, báo cáo ở `docs/lab4/report.md` và `docs/lab4/process.md`.
 
+Báo cáo tóm tắt có biểu đồ và bảng so sánh: [`docs/lab4/bao-cao/bao-cao-lab4.md`](docs/lab4/bao-cao/bao-cao-lab4.md). Vẽ lại hình của báo cáo này bằng `python src/bao_cao_hinh.py` (chạy sau `src/main.py`).
+
 ## 5. Cấu trúc thư mục
 
 ```
@@ -64,6 +66,9 @@ lab4-time/
     ├── report.md     nội dung và kết quả
     ├── process.md    quy trình, phương pháp, kết quả trung gian
     ├── phan-cong.md  phân công chi tiết
+    ├── doi-chieu-yeu-cau-co.md  đối chiếu từng yêu cầu của đề với bài nhóm
+    ├── kiem-tra-lab4.md         kết quả kiểm tra bài của từng người
+    ├── bao-cao/      báo cáo tóm tắt (bao-cao-lab4.md) và hình hinh/
     ├── figures/
     └── parts/        bản nháp từng người
 ```
