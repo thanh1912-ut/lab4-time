@@ -1,0 +1,4 @@
+Model,RMSE,MAE,MAPE(%)
+LSTM 24h,13.96,9.57,4.75
+LSTM 24h + lịch,12.4,8.81,4.2
+Seasonal naive 24h,13.42,7.68,3.82

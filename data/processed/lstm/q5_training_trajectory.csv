@@ -1,0 +1,3 @@
+Mốc không EarlyStopping,Epoch,Train MSE,Validation MSE
+Validation tốt nhất,50,0.00603444641456,0.0107377525418996
+Epoch cuối,50,0.00603444641456,0.0107377525418996

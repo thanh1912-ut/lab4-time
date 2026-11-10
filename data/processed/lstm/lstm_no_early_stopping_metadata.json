@@ -1,0 +1,65 @@
+{
+  "name": "lstm_no_early_stopping",
+  "config": {
+    "epochs": 50,
+    "batch_size": 64,
+    "patience": 5,
+    "dropout": 0.0,
+    "early_stopping": false,
+    "seed": 42,
+    "window": 24,
+    "calendar": false,
+    "shuffle": false,
+    "learning_rate": 0.001,
+    "data_sha256": "d1782f8e7dc1a7aae06c17699edf6ccaec8bf2f8b958aac9a4da8d108d552ce3",
+    "source_sha256": "0d20c40dd354f5d23b63fa5182c597814196e2dcb343262046e3b39c2d76760d",
+    "tensorflow": "2.20.0",
+    "numpy": "2.3.5",
+    "pandas": "3.0.1",
+    "python": "3.12.14"
+  },
+  "epochs_run": 50,
+  "best_epoch": 50,
+  "selected_epoch": 50,
+  "train_seconds": 397.799,
+  "parameters": 30113,
+  "created_utc": "2026-11-07T12:41:43.519176+00:00",
+  "devices": [
+    "/physical_device:CPU:0"
+  ],
+  "units": "MW",
+  "split_metrics": {
+    "train": {
+      "RMSE": 8.96,
+      "MAE": 6.02,
+      "MAPE(%)": 2.97
+    },
+    "validation": {
+      "RMSE": 8.29,
+      "MAE": 5.58,
+      "MAPE(%)": 3.0
+    },
+    "test": {
+      "RMSE": 11.36,
+      "MAE": 7.39,
+      "MAPE(%)": 3.64
+    }
+  },
+  "splits": {
+    "train": {
+      "samples": 18388,
+      "start": "2012-01-02 00:00:00",
+      "end": "2014-02-06 03:00:00"
+    },
+    "validation": {
+      "samples": 3946,
+      "start": "2014-02-06 04:00:00",
+      "end": "2014-07-20 13:00:00"
+    },
+    "test": {
+      "samples": 3946,
+      "start": "2014-07-20 14:00:00",
+      "end": "2014-12-31 23:00:00"
+    }
+  }
+}

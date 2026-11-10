@@ -1,0 +1,10 @@
+Model,Split,RMSE,MAE,MAPE(%)
+LSTM chính + EarlyStopping,train,12.02,8.22,4.11
+LSTM chính + EarlyStopping,validation,9.76,6.65,3.48
+LSTM chính + EarlyStopping,test,13.96,9.57,4.75
+"LSTM đủ epoch, không EarlyStopping",train,8.96,6.02,2.97
+"LSTM đủ epoch, không EarlyStopping",validation,8.29,5.58,3.0
+"LSTM đủ epoch, không EarlyStopping",test,11.36,7.39,3.64
+LSTM + Dropout(0.2) + EarlyStopping,train,11.57,7.61,3.61
+LSTM + Dropout(0.2) + EarlyStopping,validation,9.31,6.02,3.01
+LSTM + Dropout(0.2) + EarlyStopping,test,12.95,8.18,3.65

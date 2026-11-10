@@ -1,0 +1,4 @@
+Model,RMSE,MAE,MAPE(%)
+Naive,25.5,16.34,8.78
+Seasonal naive (24h),13.42,7.68,3.82
+LSTM (L=24),13.96,9.57,4.75
