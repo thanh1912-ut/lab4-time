@@ -200,6 +200,24 @@ def walk_forward_test(df_flat, y, scaler, i2, best_depth, best_trees, refit_ever
     return pred_df, test_score, total_time
 
 
+def fixed_test(best_model, df_flat, y, scaler, i2):
+    """Bản dùng cho so sánh công bằng (mục 10): giữ nguyên mô hình học trên train
+    (early stopping theo validation), không refit trên test. Mỗi giờ test vẫn dùng
+    các lag thật tới giờ t, giống walk-forward một bước."""
+    test_start = i2 - L
+    preds_orig = inverse_load(best_model.predict(df_flat.iloc[test_start:]), scaler)
+    y_test_orig = inverse_load(y[test_start:], scaler)
+    pred_df = pd.DataFrame({
+        "Datetime": df_flat.index[test_start:],
+        "y_true": np.round(y_test_orig, 3),
+        "y_pred": np.round(preds_orig, 3),
+    })
+    pred_df.to_csv(PROCESSED / "pred_xgb_fixed.csv", index=False)
+    score = metrics(y_test_orig, preds_orig)
+    print(f"Bản công bằng (học trên train, không refit): {score}")
+    return pred_df, score
+
+
 def plot_sample_week(pred_df, save_path):
     """Vẽ so sánh thực tế vs dự đoán trong 1 tuần (168 giờ) tiêu biểu của tập test."""
     # Chọn tuần từ 04/08/2014 đến 10/08/2014 (cao điểm hè)
@@ -249,7 +267,10 @@ def run_m2():
         refit_every=168,
     )
 
-    # 4. Vẽ 1 tuần tiêu biểu
+    # 4. Bản so sánh công bằng: không refit (cùng luật với VAR/LSTM ở mục 10)
+    fixed_test(best_model, df_flat, y, scaler, i2)
+
+    # 5. Vẽ 1 tuần tiêu biểu
     plot_sample_week(pred_df, FIG / "m2_xgb_1tuan.png")
 
     print("===== HOÀN THÀNH MỤC 7 =====\n")

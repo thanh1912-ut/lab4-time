@@ -250,16 +250,15 @@ CÂU HỎI 6: KHÁC BIỆT GIỮA MACHINE LEARNING (XGBOOST) VÀ DEEP LEARNING (
 | Kỹ nghệ đặc trưng             | Cần tự tạo (lag, rolling, trend)  | Tự động trích xuất qua cổng nhớ   |
 | Chuẩn hóa dữ liệu             | Không bắt buộc (dựa trên phân vị)  | Rất quan trọng (cần StandardScaler)|
 | Số lượng tham số              | Dựa trên số cây & lá (nhẹ)        | 30.113 tham số (LSTM 64->32->Dense)|
-| Thời gian huấn luyện          | Rất nhanh (~2s đơn, ~75s walk-fwd)| Chậm hơn đáng kể (~3-5 phút)      |
-| Sai số kiểm thử (Test RMSE)   | 6.07 MW (MAPE: 1.86%)              | ~6.5 - 7.5 MW (tương đương/nhỉnh hơn)|
+| Thời gian huấn luyện          | Rất nhanh (~2s đơn, ~75s walk-fwd)| Chậm hơn nhiều (~2-6 phút/lần)    |
+| Test RMSE (không refit)       | 6.17 MW (MAPE: 1.89%)             | 6.14 MW (MAPE: 2.25%), 3 seed 6.02±0.11|
 | Khả năng giải thích (XAI)     | Rõ ràng (Gain, Split, PDP)        | Khó giải thích (hộp đen nơ-ron)   |
-| Độ ổn định với seed ngẫu nhiên| Rất cao, lặp lại nhất quán        | Nhạy cảm với khởi tạo trọng số    |
+| Độ ổn định với seed ngẫu nhiên| Rất cao, lặp lại nhất quán        | Nhạy với seed và cách train       |
 | Lượng dữ liệu cần thiết       | Hoạt động tốt từ dữ liệu vừa/nhỏ  | Đòi hỏi lượng dữ liệu lớn để hội tụ|
 ========================================================================================
 Nhận xét kết luận:
-1. Trong bài toán dự báo 1 bước với dữ liệu chuỗi có tính chu kỳ ngày/tuần mạnh, XGBoost kết hợp
-   với kỹ nghệ đặc trưng miền (lag 24, rolling statistics) đem lại độ chính xác vượt trội hơn hoặc
-   tương đương LSTM nhưng thời gian huấn luyện nhanh hơn gấp nhiều lần.
+1. Khi train cùng luật (học trên train, không refit), XGBoost và LSTM có RMSE gần như bằng nhau
+   (6.17 so với 6.14 MW); XGBoost tốt hơn ở MAE/MAPE và huấn luyện nhanh hơn vài chục lần.
 2. XGBoost vượt trội hoàn toàn về tính minh bạch (interpretability): thông qua Feature Importance
    và PDP, ta dễ dàng chứng minh được vai trò chi phối của chu kỳ 24h và tác động phi tuyến của nhiệt độ.
 3. Ngược lại, LSTM có lợi thế không đòi hỏi kỹ nghệ đặc trưng thủ công và xử lý tự nhiên chuỗi đa biến 3D,

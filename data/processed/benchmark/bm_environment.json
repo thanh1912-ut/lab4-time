@@ -1,0 +1,22 @@
+{
+  "python": "3.13.18",
+  "numpy": "2.5.3",
+  "pandas": "3.0.5",
+  "statsmodels": "0.15.0",
+  "xgboost": "3.4.1",
+  "scikit-learn": "1.9.1",
+  "platform": "Linux-6.18.44-fc-v338-x86_64-with-glibc2.39",
+  "data_sha256": "cdadc8311d55c2e992a92792cb558f159a6eca4d1e31fc83896058f31e6edc59",
+  "tensorflow": "2.20.0",
+  "bootstrap": {
+    "block": 168,
+    "n_boot": 2000,
+    "seed": 42
+  },
+  "dm": {
+    "hac_lag": 24,
+    "hac_lag_robust": 168,
+    "correction": "HLN 1997",
+    "multiple": "Holm"
+  }
+}

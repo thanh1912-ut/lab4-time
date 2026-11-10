@@ -1,4 +1,4 @@
 Model,Epochs,Best val epoch,Train RMSE,Validation RMSE,Test RMSE,Training seconds
-LSTM chính + EarlyStopping,21,16,12.02,9.76,13.96,164.329
-"LSTM đủ epoch, không EarlyStopping",50,50,8.96,8.29,11.36,397.799
-LSTM + Dropout(0.2) + EarlyStopping,30,25,11.57,9.31,12.95,242.434
+LSTM chính + EarlyStopping,26,16,6.02,5.9,6.14,139.509
+"LSTM đủ epoch, không EarlyStopping",50,16,5.31,6.23,5.92,234.351
+LSTM + Dropout(0.2) + EarlyStopping,40,30,6.07,6.15,6.03,197.719

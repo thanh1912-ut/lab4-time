@@ -1,0 +1,41 @@
+A,B,loss,hac_lag,mean_diff,DM,p,p_holm
+Seasonal naive 24h,VAR(26),squared,24,143.190117,2.827365,0.004717,0.028302
+Seasonal naive 24h,XGBoost,squared,24,141.876755,3.095127,0.001981,0.015849
+Seasonal naive 24h,LSTM,squared,24,142.245137,2.756382,0.005871,0.029357
+Seasonal naive 24h,Kết hợp 3 mô hình,squared,24,151.231062,2.979985,0.0029,0.020301
+VAR(26),XGBoost,squared,24,-1.313363,-0.20327,0.838935,1.0
+VAR(26),LSTM,squared,24,-0.94498,-0.543481,0.586829,1.0
+VAR(26),Kết hợp 3 mô hình,squared,24,8.040945,9.333184,0.0,0.0
+XGBoost,LSTM,squared,24,0.368382,0.04906,0.960874,1.0
+XGBoost,Kết hợp 3 mô hình,squared,24,9.354307,1.493211,0.135462,0.541848
+LSTM,Kết hợp 3 mô hình,squared,24,8.985925,6.084288,0.0,0.0
+Seasonal naive 24h,VAR(26),squared,168,143.190117,1.981765,0.047575,0.285449
+Seasonal naive 24h,XGBoost,squared,168,141.876755,2.165308,0.030424,0.243391
+Seasonal naive 24h,LSTM,squared,168,142.245137,1.938027,0.052691,0.285449
+Seasonal naive 24h,Kết hợp 3 mô hình,squared,168,151.231062,2.089929,0.036688,0.256817
+VAR(26),XGBoost,squared,168,-1.313363,-0.184819,0.853381,1.0
+VAR(26),LSTM,squared,168,-0.94498,-0.456441,0.648098,1.0
+VAR(26),Kết hợp 3 mô hình,squared,168,8.040945,7.63989,0.0,0.0
+XGBoost,LSTM,squared,168,0.368382,0.04434,0.964635,1.0
+XGBoost,Kết hợp 3 mô hình,squared,168,9.354307,1.322137,0.186199,0.744796
+LSTM,Kết hợp 3 mô hình,squared,168,8.985925,5.504581,0.0,0.0
+Seasonal naive 24h,VAR(26),absolute,24,3.571933,6.979788,0.0,0.0
+Seasonal naive 24h,XGBoost,absolute,24,3.871108,8.820325,0.0,0.0
+Seasonal naive 24h,LSTM,absolute,24,3.292093,6.092875,0.0,0.0
+Seasonal naive 24h,Kết hợp 3 mô hình,absolute,24,4.071432,7.990221,0.0,0.0
+VAR(26),XGBoost,absolute,24,0.299175,2.798411,0.00516,0.010321
+VAR(26),LSTM,absolute,24,-0.27984,-3.467455,0.000531,0.001593
+VAR(26),Kết hợp 3 mô hình,absolute,24,0.499499,12.225232,0.0,0.0
+XGBoost,LSTM,absolute,24,-0.579015,-4.015447,6e-05,0.000242
+XGBoost,Kết hợp 3 mô hình,absolute,24,0.200324,2.141981,0.032256,0.032256
+LSTM,Kết hợp 3 mô hình,absolute,24,0.779338,12.316697,0.0,0.0
+Seasonal naive 24h,VAR(26),absolute,168,3.571933,5.21826,0.0,1e-06
+Seasonal naive 24h,XGBoost,absolute,168,3.871108,6.734009,0.0,0.0
+Seasonal naive 24h,LSTM,absolute,168,3.292093,4.504806,7e-06,3.4e-05
+Seasonal naive 24h,Kết hợp 3 mô hình,absolute,168,4.071432,5.964432,0.0,0.0
+VAR(26),XGBoost,absolute,168,0.299175,2.080337,0.037559,0.075118
+VAR(26),LSTM,absolute,168,-0.27984,-2.495684,0.012612,0.037836
+VAR(26),Kết hợp 3 mô hình,absolute,168,0.499499,7.357851,0.0,0.0
+XGBoost,LSTM,absolute,168,-0.579015,-3.229203,0.001252,0.005006
+XGBoost,Kết hợp 3 mô hình,absolute,168,0.200324,1.676823,0.093656,0.093656
+LSTM,Kết hợp 3 mô hình,absolute,168,0.779338,10.61462,0.0,0.0

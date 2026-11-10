@@ -11,6 +11,12 @@ So sánh:
 - LSTM
 
 Chỉ sử dụng dữ liệu dự báo thực tế, không tạo dữ liệu giả.
+
+So sánh công bằng: bảng chính dùng cùng một luật cho cả 3 mô hình
+- học trên train, validation chỉ để chọn cấu hình / dừng sớm;
+- không huấn luyện lại trên test; mỗi giờ test dự báo 1 bước từ lịch sử thật;
+- cùng 3.946 giờ test, cùng scaler fit trên train, cùng công thức sai số.
+Bản VAR/XGBoost có refit mỗi 168 giờ được báo riêng (compare_metrics_refit.csv).
 """
 
 import numpy as np
@@ -27,10 +33,26 @@ from utils import load_data, PROCESSED, FIG
 TRAIN_RATIO = 0.70
 VAL_RATIO = 0.15
 
+# Bảng chính: cả 3 mô hình học một lần trên train, không refit trên test.
 MODEL_FILES = {
-    "VAR": "pred_var.csv",
-    "XGBoost": "pred_xgb.csv",
+    "VAR": "pred_var_fixed.csv",
+    "XGBoost": "pred_xgb_fixed.csv",
     "LSTM": "pred_lstm.csv",
+}
+
+# Bảng phụ: bản walk-forward có refit mỗi 168 giờ của mục 6, 7.
+REFIT_FILES = {
+    "VAR (refit mỗi 168 giờ)": "pred_var.csv",
+    "XGBoost (refit mỗi 168 giờ)": "pred_xgb.csv",
+}
+
+# Ghi chú cách huấn luyện cho từng dòng của bảng chính.
+TRAINING_NOTES = {
+    "Naive": "Không học; dự báo = load giờ trước",
+    "Seasonal Naive (24h)": "Không học; dự báo = load cùng giờ hôm trước",
+    "VAR": "VAR(26), p chọn theo BIC trên train; học 1 lần trên train; không refit",
+    "XGBoost": "max_depth chọn trong {3,5,7,9} trên validation; học trên train, early stopping theo validation; không refit",
+    "LSTM": "patience chọn trong {5,10} trên validation (TB 3 seed); xáo trộn cửa sổ train; seed 42; không refit",
 }
 
 MODEL_COLORS = {
@@ -407,6 +429,25 @@ def compare_all_models():
 
     print(f"\nĐã lưu bảng metrics: {metrics_path}")
     print(f"Đã lưu dữ liệu so sánh: {comparison_path}")
+
+    # Ghi chú cách huấn luyện, để bảng chính tự nói rõ luật so sánh.
+    pd.DataFrame(
+        {"Model": list(TRAINING_NOTES), "Cách huấn luyện": list(TRAINING_NOTES.values())}
+    ).to_csv(PROCESSED / "compare_protocol.csv", index=False, encoding="utf-8-sig")
+
+    # Bảng phụ: VAR/XGBoost có refit mỗi 168 giờ, trên cùng các mốc thời gian.
+    refit_rows = []
+    for model_name, file_name in REFIT_FILES.items():
+        df_pred = load_prediction(model_name, file_name)
+        y_pred = df_pred["y_pred"].reindex(comparison.index)
+        if y_pred.isna().any():
+            raise ValueError(f"{file_name} thiếu dự báo ở một số giờ test.")
+        refit_rows.append({"Model": model_name,
+                           **calculate_metrics(comparison["Actual"].values, y_pred.values)})
+    df_refit = pd.DataFrame(refit_rows).set_index("Model")
+    df_refit.to_csv(PROCESSED / "compare_metrics_refit.csv", encoding="utf-8-sig")
+    print("\nBảng phụ (refit mỗi 168 giờ, không dùng cho xếp hạng chính):")
+    print(df_refit.to_string())
 
     # --------------------------------------------------------
     # 4.8. Biểu đồ Actual vs Prediction

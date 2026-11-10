@@ -1,8 +1,8 @@
 # Quy trình Câu 5: Overfitting — Hoàng Nam
 
 1. Giữ nguyên cách chia thời gian và scaler fit trên train; dùng cùng mẫu cho ba cấu hình.
-2. Mạng chính LSTM(64) → LSTM(32) → Dense(1), Adam(0.001), MSE, batch/epoch theo CLI, shuffle=False.
-3. EarlyStopping theo val_loss, patience=5, khôi phục trọng số tốt nhất. Ghi số epoch đã chạy và epoch chọn bằng validation.
+2. Mạng chính LSTM(64) → LSTM(32) → Dense(1), Adam(0.001), MSE, batch/epoch theo CLI, xáo trộn cửa sổ train mỗi epoch (seed 42).
+3. EarlyStopping theo val_loss, patience=10 (chọn ở mục 8 bằng validation), khôi phục trọng số tốt nhất. Ghi số epoch đã chạy và epoch chọn bằng validation.
 4. Chạy `lstm_no_early_stopping` đủ số epoch đặt trước, đánh giá trọng số epoch cuối để quan sát tác động huấn luyện kéo dài.
 5. Chạy `lstm_dropout`: Dropout(0.2) sau mỗi lớp LSTM, giữ các cấu hình còn lại và EarlyStopping.
 6. Với trọng số chọn của mỗi cấu hình, dự báo train/validation/test, inverse về MW rồi tính cùng `utils.metrics()`.

@@ -5,7 +5,9 @@ File làm gì:
   2. Chọn bậc trễ p bằng select_order(maxlags=48) theo AIC/BIC
   3. Huấn luyện VAR(p) trên train, in hệ số phương trình load, kiểm định Granger
   4. Walk-forward trên test bằng backtest.walk_forward (refit mỗi 168 giờ)
-  5. Lưu data/processed/pred_var.csv (Datetime, y_true, y_pred), hình m1_var_1tuan.png,
+  5. Bản so sánh công bằng: học một lần trên train, không refit trên test
+     (cùng luật với XGBoost/LSTM) -> data/processed/pred_var_fixed.csv
+  6. Lưu data/processed/pred_var.csv (Datetime, y_true, y_pred), hình m1_var_1tuan.png,
      bản nháp docs/lab4/parts/m1_report.md
 
 Chạy từ thư mục gốc:  python src/m1_var.py
@@ -79,10 +81,14 @@ def make_predict_fn(diff: bool):
     return predict_fn
 
 
-def run_walk_forward(scaled, scaler, i2, p, diff, refit_every=REFIT_EVERY) -> pd.DataFrame:
-    """Walk-forward trên test với VAR(p). Trả về DataFrame y_true, y_pred (thang đo gốc)."""
+def run_walk_forward(scaled, scaler, i2, p, diff, refit_every=REFIT_EVERY, train_end=None) -> pd.DataFrame:
+    """Walk-forward trên test với VAR(p). Trả về DataFrame y_true, y_pred (thang đo gốc).
+
+    train_end=None: lần học đầu dùng train + validation. train_end=i1: chỉ học trên train.
+    """
     pred_z = walk_forward(make_fit_fn(p, diff), make_predict_fn(diff),
-                          scaled, i2, len(scaled), refit_every=refit_every)["prediction"].to_numpy()
+                          scaled, i2, len(scaled), refit_every=refit_every,
+                          train_end=train_end)["prediction"].to_numpy()
     out = pd.DataFrame({
         "y_true": inverse_load(scaled[TARGET].iloc[i2:].to_numpy(), scaler),
         "y_pred": inverse_load(pred_z, scaler),
@@ -149,6 +155,14 @@ def main():
     json.dump({"p": p, "diff": diff, "criterion": CRITERION, "p_aic": p_aic, "p_bic": p_bic},
               open(PROCESSED / "var_order.json", "w"))
 
+    # 4b. So sánh công bằng: học một lần trên train, không refit -----------
+    t0 = time.time()
+    fixed = run_walk_forward(scaled, scaler, i2, p, diff, refit_every=None, train_end=i1)
+    secs_fixed = time.time() - t0
+    m_fixed = metrics(fixed["y_true"], fixed["y_pred"])
+    print("Bản công bằng (học trên train, không refit):", m_fixed, f"| {secs_fixed:.0f}s")
+    fixed.to_csv(PROCESSED / "pred_var_fixed.csv")
+
     # 5. Hình 1 tuần ---------------------------------------------------------
     w = out.iloc[:168]
     plt.figure(figsize=(12, 4))
@@ -188,9 +202,19 @@ p theo AIC = {p_aic}, p theo BIC = {p_bic}. Chọn **p = {p}** theo {CRITERION.u
 | {m['RMSE']} | {m['MAE']} | {m['MAPE(%)']} |
 
 Hình: `figures/m1_var_1tuan.png`. Thời gian chạy walk-forward: {secs:.0f} giây.
+
+## Bản dùng cho so sánh công bằng (mục 10)
+Học VAR({p}) **một lần trên train**, không refit trên test; mỗi giờ test vẫn dự báo 1 bước từ {p} giờ thật trước đó.
+Cùng luật với XGBoost và LSTM (validation chỉ để chọn cấu hình). File `data/processed/pred_var_fixed.csv`.
+
+| RMSE (MW) | MAE (MW) | MAPE (%) |
+|---|---|---|
+| {m_fixed['RMSE']} | {m_fixed['MAE']} | {m_fixed['MAPE(%)']} |
+
+Refit mỗi tuần chỉ đổi RMSE {m['RMSE'] - m_fixed['RMSE']:+.2f} MW so với bản học một lần.
 """
     (PARTS / "m1_report.md").write_text(txt, encoding="utf-8")
-    print("\nĐã lưu: pred_var.csv, m1_var_1tuan.png, parts/m1_report.md")
+    print("\nĐã lưu: pred_var.csv, pred_var_fixed.csv, m1_var_1tuan.png, parts/m1_report.md")
 
 
 if __name__ == "__main__":

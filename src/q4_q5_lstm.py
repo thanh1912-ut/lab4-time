@@ -8,7 +8,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from lstm_common import RESULTS_DIR, prepare_data, save_json, train_experiment
+from lstm_common import RESULTS_DIR, prepare_data, save_json, train_experiment, tune_main
 
 import matplotlib
 matplotlib.use("Agg")
@@ -168,8 +168,9 @@ Mô hình chính có **{base['metadata']['parameters']:,} tham số**, thời gi
 **{calendar['metadata']['parameters']:,} tham số**, thời gian huấn luyện
 **{calendar['metadata']['train_seconds']:.2f} giây**. Thời gian là số đo của từng lần chạy,
 không bao gồm khâu chuẩn bị dữ liệu hay dự báo và có thể thay đổi theo tải máy.
-Cấu hình được định trước; EarlyStopping dùng validation. Tập test chỉ dùng để báo cáo,
-không dùng để chọn lại mô hình chính.
+Mô hình chính và biến thể dùng cùng cách train: xáo trộn cửa sổ train mỗi epoch, seed {SEED},
+EarlyStopping patience {base['metadata']['config']['patience']} (patience chọn ở mục 8 bằng validation).
+Tập test chỉ dùng để báo cáo, không dùng để chọn lại mô hình chính.
 
 ## Kết quả trên cùng tập test
 
@@ -319,7 +320,7 @@ def analyse_q5(experiments):
         late_improvement = (
             f"Ở lần chạy đủ epoch, validation tốt nhất xuất hiện tại epoch {noes_best_idx + 1}, "
             f"sau thời điểm mô hình chính đã dừng (epoch {base['metadata']['epochs_run']}). "
-            "Validation có thể cải thiện trở lại sau một đoạn chững; patience=5 của mô hình chính "
+            f"Validation có thể cải thiện trở lại sau một đoạn chững; patience={base['metadata']['config']['patience']} của mô hình chính "
             "đã dừng trước lần cải thiện muộn này. EarlyStopping không bảo đảm tìm được checkpoint "
             "tốt nhất của toàn bộ lịch huấn luyện dài hơn. Đây là quan sát trên validation; "
             "mô hình chính vẫn giữ đúng cấu hình đã định trước."
@@ -343,6 +344,25 @@ def analyse_q5(experiments):
         "diagnostic_rule": "at least 5 epochs after best validation; train falls >1% and validation rises >1%; final up-to-5-epoch means agree",
     })
     gap_text = "cao hơn" if difference >= 0 else "thấp hơn"
+    if epochs_after_best == 0:
+        # Validation tốt nhất ở epoch cuối: không có đoạn nào sau mốc tốt nhất để so.
+        trajectory_text = (
+            f"Ở biến thể đủ epoch, validation loss thấp nhất nằm ở **epoch cuối ({noes_last_epoch})** "
+            f"(train MSE **{noes_train_last:.6f}**, validation MSE **{noes_last:.6f}**, thang chuẩn hóa). "
+            "Validation vẫn còn giảm tới khi dừng, tức mô hình **chưa hội tụ** trong số epoch đã đặt: "
+            "đây là dấu hiệu học chưa đủ (underfitting), không phải overfitting."
+        )
+    else:
+        trajectory_text = f"""Ở biến thể đủ epoch, từ epoch **{noes_best_idx + 1}** (validation tốt nhất) tới epoch
+**{noes_last_epoch}**, train MSE đổi từ **{noes_train_at_best:.6f}** thành **{noes_train_last:.6f}**
+(chênh lệch cuối − đầu **{train_delta:+.6f}**, mức giảm **{train_drop_pct:+.2f}%**);
+validation MSE từ **{noes_best:.6f}** thành **{noes_last:.6f}**
+(chênh lệch **{val_delta:+.6f}**, mức tăng **{val_rise_pct:+.2f}%**).
+Trung bình {tail_size} epoch cuối: train MSE **{late_train_mean:.6f}**,
+validation MSE **{late_val_mean:.6f}**. Các đại lượng này đều ở thang chuẩn hóa.
+Chẩn đoán phân kỳ rõ dùng quy tắc mô tả: có ít nhất 5 epoch sau mốc tốt nhất,
+train giảm trên 1%, validation tăng trên 1%, và trung bình tối đa 5 epoch cuối cùng cùng chiều.
+Đây là quy tắc đọc kết quả của thí nghiệm, không phải kiểm định thống kê."""
     report = f"""# Câu 5: LSTM có bị overfitting không? — Hoàng Nam
 
 ## Thí nghiệm kiểm tra
@@ -377,25 +397,17 @@ so với {val_last:.6f} ở epoch cuối đã chạy. RMSE validation {gap_text}
 Chênh lệch cần đọc cùng đường loss: các tập là các giai đoạn thời gian khác nhau,
 nên thay đổi mùa và phân phối cũng có thể tạo chênh lệch, không chỉ overfitting.
 
-Ở biến thể đủ epoch, từ epoch **{noes_best_idx + 1}** (validation tốt nhất) tới epoch
-**{noes_last_epoch}**, train MSE đổi từ **{noes_train_at_best:.6f}** thành **{noes_train_last:.6f}**
-(chênh lệch cuối − đầu **{train_delta:+.6f}**, mức giảm **{train_drop_pct:+.2f}%**);
-validation MSE từ **{noes_best:.6f}** thành **{noes_last:.6f}**
-(chênh lệch **{val_delta:+.6f}**, mức tăng **{val_rise_pct:+.2f}%**).
-Trung bình {tail_size} epoch cuối: train MSE **{late_train_mean:.6f}**,
-validation MSE **{late_val_mean:.6f}**. Các đại lượng này đều ở thang chuẩn hóa.
-Chẩn đoán phân kỳ rõ dùng quy tắc mô tả: có ít nhất 5 epoch sau mốc tốt nhất,
-train giảm trên 1%, validation tăng trên 1%, và trung bình tối đa 5 epoch cuối cùng cùng chiều.
-Đây là quy tắc đọc kết quả của thí nghiệm, không phải kiểm định thống kê.
+{trajectory_text}
 
 EarlyStopping hạn chế tiếp tục học khi validation không cải thiện; Dropout là thử nghiệm
-regularization bổ sung. Một seed chưa đủ để khẳng định mức cải thiện ổn định.
+regularization bổ sung. Biến thể chạy một seed (mô hình chính có thêm 2 seed ở mục 8),
+chưa đủ để khẳng định mức cải thiện ổn định.
 """
     process = f"""# Quy trình Câu 5: Overfitting — Hoàng Nam
 
 1. Giữ nguyên cách chia thời gian và scaler fit trên train; dùng cùng mẫu cho ba cấu hình.
-2. Mạng chính LSTM(64) → LSTM(32) → Dense(1), Adam(0.001), MSE, batch/epoch theo CLI, shuffle=False.
-3. EarlyStopping theo val_loss, patience=5, khôi phục trọng số tốt nhất. Ghi số epoch đã chạy và epoch chọn bằng validation.
+2. Mạng chính LSTM(64) → LSTM(32) → Dense(1), Adam(0.001), MSE, batch/epoch theo CLI, xáo trộn cửa sổ train mỗi epoch (seed {SEED}).
+3. EarlyStopping theo val_loss, patience={experiments['lstm_main']['metadata']['config']['patience']} (chọn ở mục 8 bằng validation), khôi phục trọng số tốt nhất. Ghi số epoch đã chạy và epoch chọn bằng validation.
 4. Chạy `lstm_no_early_stopping` đủ số epoch đặt trước, đánh giá trọng số epoch cuối để quan sát tác động huấn luyện kéo dài.
 5. Chạy `lstm_dropout`: Dropout(0.2) sau mỗi lớp LSTM, giữ các cấu hình còn lại và EarlyStopping.
 6. Với trọng số chọn của mỗi cấu hình, dự báo train/validation/test, inverse về MW rồi tính cùng `utils.metrics()`.
@@ -439,8 +451,11 @@ def main(argv=None):
     data, calendar_data = prepare_data(), prepare_data(calendar=True)
     if not pd.DatetimeIndex(data["times_test"]).equals(pd.DatetimeIndex(calendar_data["times_test"])):
         raise ValueError("Mốc test của mô hình chính và biến thể lịch phải giống hệt nhau.")
-    kwargs = dict(epochs=args.epochs, batch_size=args.batch_size, patience=5, verbose=args.verbose, force=args.force)
-    base = train_experiment("lstm_main", data, **kwargs)
+    # Mô hình chính lấy từ bước chọn patience của mục 8 (dùng cache nếu đã chạy m3_lstm.py).
+    tuned = tune_main(data, epochs=args.epochs, batch_size=args.batch_size, force=args.force, verbose=args.verbose)
+    base = tuned["main"]
+    kwargs = dict(epochs=args.epochs, batch_size=args.batch_size, patience=tuned["selection"]["patience"],
+                  verbose=args.verbose, force=args.force)
     calendar = train_experiment("lstm_calendar", calendar_data, **kwargs)
     q4 = analyse_q4(base, calendar, data, recursive=not args.skip_recursive)
     dropout = train_experiment("lstm_dropout", data, dropout=.2, **kwargs)

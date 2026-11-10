@@ -70,3 +70,14 @@ Kết quả định lượng trên tập Test (thang đo công suất gốc MW):
 1. Đường dự báo của XGBoost bám cực kỳ sát đường thực tế ở cả các đỉnh phụ tải ban ngày (đạt trên 320 MW) lẫn đáy phụ tải ban đêm (dưới 110 MW).
 2. Mô hình phản ứng nhạy bén với sự chuyển dịch tải giữa các ngày trong tuần và hai ngày cuối tuần (thứ Bảy và Chủ nhật phụ tải hạ thấp rõ rệt).
 3. Sai số Walk-forward với việc refit định kỳ 1 tuần/lần giúp mô hình nhanh chóng thích nghi khi thời tiết chuyển mùa từ thu sang đông vào cuối năm 2014.
+
+## 7.4. Bản dùng cho so sánh công bằng (mục 10)
+
+Để so với VAR và LSTM theo cùng một luật, giữ nguyên mô hình đã chọn ở 7.2 (max_depth = 7, học trên train, early stopping theo validation, 153 cây) và **không refit** trên test. Mỗi giờ test vẫn dùng lag thật tới giờ $t$. Kết quả lưu ở `data/processed/pred_xgb_fixed.csv`:
+
+| Cách đánh giá | RMSE (MW) | MAE (MW) | MAPE (%) |
+|---|:---:|:---:|:---:|
+| Walk-forward, refit mỗi 168 giờ (7.3) | 6,07 | 3,71 | 1,86 |
+| Học một lần trên train, không refit | 6,17 | 3,81 | 1,89 |
+
+Refit hằng tuần giúp giảm RMSE khoảng 0,10 MW (1,6%). Mức này nhỏ so với khác biệt giữa các mô hình, nên bảng so sánh chính ở mục 10 dùng bản không refit cho cả ba mô hình.
